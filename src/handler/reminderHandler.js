@@ -4,13 +4,14 @@ import {
     deleteReminder,
     toggleReminder
 } from "../repositories/reminderRepository.js"
+import { enqueueMessage } from "../services/messageQueue.js"
 
 export async function handleReminder({ sock, groupId, userNumber, text }) {
 
     const args = text.trim().split(/\s+/)
 
     if (!args[1]) {
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `
 🔔 *Reminder Commands*
 
@@ -25,34 +26,28 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
     const action = args[1].toLowerCase()
 
-    // ========================
-    // ADD
-    // ========================
     if (action === "add") {
         const time = args[2]
 
         if (!time || !/^\d{2}:\d{2}$/.test(time)) {
-            return sock.sendMessage(groupId, {
+            return enqueueMessage(sock, groupId, {
                 text: "❌ Format salah.\nContoh: /reminder add 20:30"
             })
         }
 
         await createReminder(groupId, userNumber, time)
 
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `✅ Reminder berhasil ditambahkan jam ${time}`
         })
     }
 
-    // ========================
-    // LIST
-    // ========================
     if (action === "list") {
 
         const reminders = await getReminders(groupId, userNumber)
 
         if (reminders.length === 0) {
-            return sock.sendMessage(groupId, {
+            return enqueueMessage(sock, groupId, {
                 text: "📭 Kamu belum punya reminder."
             })
         }
@@ -62,64 +57,55 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
             return `• ${r.reminder_time} (${status})`
         }).join("\n")
 
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `🔔 *Your Reminders*\n\n${formatted}`
         })
     }
 
-    // ========================
-    // DELETE
-    // ========================
     if (action === "delete") {
         const time = args[2]
 
         if (!time) {
-            return sock.sendMessage(groupId, {
+            return enqueueMessage(sock, groupId, {
                 text: "Contoh: /reminder delete 20:30"
             })
         }
 
         await deleteReminder(groupId, userNumber, time)
 
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `🗑 Reminder ${time} berhasil dihapus`
         })
     }
 
-    // ========================
-    // OFF
-    // ========================
     if (action === "off") {
         const time = args[2]
 
         if (!time) {
-            return sock.sendMessage(groupId, {
+            return enqueueMessage(sock, groupId, {
                 text: "Contoh: /reminder off 20:30"
             })
         }
 
         await toggleReminder(groupId, userNumber, time, false)
 
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `⏸ Reminder ${time} dimatikan`
         })
     }
 
-    // ========================
-    // ON
-    // ========================
     if (action === "on") {
         const time = args[2]
 
         if (!time) {
-            return sock.sendMessage(groupId, {
+            return enqueueMessage(sock, groupId, {
                 text: "Contoh: /reminder on 20:30"
             })
         }
 
         await toggleReminder(groupId, userNumber, time, true)
 
-        return sock.sendMessage(groupId, {
+        return enqueueMessage(sock, groupId, {
             text: `▶ Reminder ${time} diaktifkan`
         })
     }

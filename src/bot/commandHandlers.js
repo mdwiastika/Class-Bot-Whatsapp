@@ -1,5 +1,6 @@
+import { enqueueMessage } from "../services/messageQueue.js"
 export async function handleMenu({ sock, groupId }) {
-    await sock.sendMessage(groupId, {
+    await enqueueMessage(sock, groupId, {
         text: `
 🎓 *CLASS MANAGER BOT*
 
@@ -32,13 +33,13 @@ export async function handleMenu({ sock, groupId }) {
 }
 
 export async function handleTask({ sock, groupId }) {
-    await sock.sendMessage(groupId, {
+    await enqueueMessage(sock, groupId, {
         text: "Task feature coming soon."
     })
 }
 
 export async function handleSchedule({ sock, groupId }) {
-    await sock.sendMessage(groupId, {
+    await enqueueMessage(sock, groupId, {
         text: "Schedule feature coming soon."
     })
 }

@@ -1,5 +1,6 @@
+import { enqueueMessage } from "../services/messageQueue.js"
 export async function handleDonate({ sock, groupId }) {
-    await sock.sendMessage(groupId, {
+    return enqueueMessage(sock, groupId, {
         text: `
 💖 *Support Class Manager Bot*
 

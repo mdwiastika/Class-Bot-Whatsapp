@@ -1,5 +1,6 @@
 import cron from "node-cron"
 import pool from "../config/db.js"
+import { enqueueMessage } from "./messageQueue.js"
 
 export function startReminderScheduler(sock) {
 
@@ -22,13 +23,10 @@ export function startReminderScheduler(sock) {
 
             for (const row of result.rows) {
 
-                await sock.sendMessage(row.group_id, {
+                await enqueueMessage(sock, row.group_id, {
                     text: `🔔 @${row.user_number} jangan lupa isi logbook ya 👀`,
                     mentions: [`${row.user_number}@s.whatsapp.net`]
                 })
-
-                // Delay kecil biar aman dari spam detection
-                await new Promise(resolve => setTimeout(resolve, 2000))
             }
 
         } catch (error) {

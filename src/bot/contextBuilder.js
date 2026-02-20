@@ -26,8 +26,6 @@ export function buildContext(sock, msgWrapper) {
         ? senderJid.split("@")[0].split(":")[0]
         : ""
 
-    console.log("Final sender:", senderJid)
-
     return {
         sock,
         text,
