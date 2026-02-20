@@ -16,7 +16,10 @@ async function processQueue(sock) {
         const { jid, message } = queue.shift()
 
         try {
+            await sock.sendPresenceUpdate("composing", jid)
+            await randomDelay(800, 1500)
             await sock.sendMessage(jid, message)
+            await sock.sendPresenceUpdate("paused", jid)
             await randomDelay(2000, 4000)
         } catch (err) {
             console.error("Queue send error:", err)

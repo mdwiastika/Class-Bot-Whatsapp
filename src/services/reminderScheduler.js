@@ -1,6 +1,7 @@
 import cron from "node-cron"
 import pool from "../config/db.js"
 import { enqueueMessage } from "./messageQueue.js"
+import { getRandomReminder } from "../utils/reminderMessage.js"
 
 export function startReminderScheduler(sock) {
 
@@ -22,9 +23,9 @@ export function startReminderScheduler(sock) {
             if (result.rows.length === 0) return
 
             for (const row of result.rows) {
-
+                const randomText = getRandomReminder()
                 await enqueueMessage(sock, row.group_id, {
-                    text: `🔔 @${row.user_number} jangan lupa isi logbook ya 👀`,
+                    text: `🔔 @${row.user_number} ${randomText}`,
                     mentions: [`${row.user_number}@s.whatsapp.net`]
                 })
             }
