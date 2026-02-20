@@ -1,9 +1,9 @@
 import 'dotenv/config'
 import makeWASocket, {
-    useMultiFileAuthState,
     DisconnectReason,
     Browsers
 } from '@whiskeysockets/baileys'
+import { useDbAuthState } from './services/dbAuthState.js'
 import P from 'pino'
 import QRCode from 'qrcode'
 
@@ -12,12 +12,12 @@ import { buildContext } from './bot/contextBuilder.js'
 import { startReminderScheduler } from "./services/reminderScheduler.js"
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth')
+    const { state, saveCreds } = await useDbAuthState()
 
     const sock = makeWASocket({
         auth: state,
-        logger: P({ level: 'silent' }),
-        browser: Browsers.ubuntu("Desktop"), // penting untuk pairing stabil
+        logger: P({ level: 'debug' }),
+        browser: Browsers.ubuntu("Desktop"),
         markOnlineOnConnect: false
     })
 
@@ -25,29 +25,25 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds)
 
-    sock.ev.on('connection.update', async (update) => {
+    sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update
 
         if (qr) {
-            console.log(await QRCode.toString(qr, { type: 'terminal', small: true }))
+            console.log(await QRCode.toString(qr, { type: "terminal", small: true }))
         }
 
-        if (connection === 'open') {
-            console.log('Bot connected 🔥')
+        if (connection === "open") {
+            console.log("Bot connected 🔥")
         }
 
-        if (connection === 'close') {
-            const shouldRestart =
-                lastDisconnect?.error?.output?.statusCode ===
-                DisconnectReason.restartRequired
+        if (connection === "close") {
+            const statusCode = lastDisconnect?.error?.output?.statusCode
 
-            console.log('Connection closed.')
-
-            if (shouldRestart) {
-                console.log('Restart required. Reconnecting...')
-                startBot()
+            if (statusCode === DisconnectReason.loggedOut) {
+                console.log("Session logged out. Need to scan QR again.")
             } else {
-                console.log('Logged out or connection error.')
+                console.log("Reconnecting...")
+                startBot() // safe restart
             }
         }
     })
