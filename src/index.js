@@ -16,7 +16,7 @@ async function startBot() {
 
     const sock = makeWASocket({
         auth: state,
-        logger: P({ level: 'debug' }),
+        logger: P({ level: 'silent' }),
         browser: Browsers.ubuntu("Desktop"),
         markOnlineOnConnect: false
     })
