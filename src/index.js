@@ -9,6 +9,7 @@ import QRCode from 'qrcode'
 
 import { routeMessage } from './bot/messageRouter.js'
 import { buildContext } from './bot/contextBuilder.js'
+import { startReminderScheduler } from "./services/reminderScheduler.js"
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth')
@@ -19,6 +20,8 @@ async function startBot() {
         browser: Browsers.ubuntu("Desktop"), // penting untuk pairing stabil
         markOnlineOnConnect: false
     })
+
+    startReminderScheduler(sock)
 
     sock.ev.on('creds.update', saveCreds)
 

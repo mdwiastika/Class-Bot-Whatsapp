@@ -5,6 +5,7 @@ import {
 } from "./commandHandlers.js"
 import { handleReminder } from "../handler/reminderHandler.js"
 import { handleDonate } from "../handler/donateHandler.js"
+import { findGroup, createGroup } from "../repositories/groupRepository.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId } = context
@@ -42,6 +43,12 @@ export async function routeMessage(context) {
     }
 
     try {
+        // Auto register group
+        const existingGroup = await findGroup(context.groupId)
+
+        if (!existingGroup) {
+            await createGroup(context.groupId)
+        }
         await handler(context)
     } catch (error) {
         console.error("Command error:", error)
