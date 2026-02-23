@@ -10,6 +10,7 @@ import QRCode from 'qrcode'
 import { routeMessage } from './bot/messageRouter.js'
 import { buildContext } from './bot/contextBuilder.js'
 import { startReminderScheduler } from "./services/reminderScheduler.js"
+import { startGlobalScheduler } from './services/scheduler.js'
 
 let isSchedulerStarted = false
 
@@ -25,6 +26,7 @@ async function startBot() {
 
     if (!isSchedulerStarted) {
         startReminderScheduler(sock)
+        startGlobalScheduler(sock)
         isSchedulerStarted = true
     }
 
