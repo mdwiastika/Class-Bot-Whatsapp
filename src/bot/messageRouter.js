@@ -1,11 +1,11 @@
 import {
     handleMenu,
     handleTask,
-    handleSchedule
 } from "./commandHandlers.js"
 import { handleReminder } from "../handler/reminderHandler.js"
 import { handleDonate } from "../handler/donateHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
+import { handleSchedule } from "../handler/scheduleHandler.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId } = context
