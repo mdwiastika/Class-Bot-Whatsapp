@@ -11,6 +11,8 @@ import { routeMessage } from './bot/messageRouter.js'
 import { buildContext } from './bot/contextBuilder.js'
 import { startReminderScheduler } from "./services/reminderScheduler.js"
 
+let isSchedulerStarted = false
+
 async function startBot() {
     const { state, saveCreds } = await useDbAuthState()
 
@@ -21,7 +23,10 @@ async function startBot() {
         markOnlineOnConnect: false
     })
 
-    startReminderScheduler(sock)
+    if (!isSchedulerStarted) {
+        startReminderScheduler(sock)
+        isSchedulerStarted = true
+    }
 
     sock.ev.on('creds.update', saveCreds)
 
@@ -43,7 +48,7 @@ async function startBot() {
                 console.log("Session logged out. Need to scan QR again.")
             } else {
                 console.log("Reconnecting...")
-                startBot() // safe restart
+                startBot() // reconnect socket saja
             }
         }
     })
