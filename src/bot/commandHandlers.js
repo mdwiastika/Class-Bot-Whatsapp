@@ -18,18 +18,43 @@ export async function handleMenu({ sock, groupId }) {
    • /task list
    • /task delete ID
 
-📅 *Class Schedule*
-   • Add Schedule:
-     • One-time:
-       /schedule 2026-02-25 08:00 Meeting
-     • Daily:
-       /schedule daily 08:00 Good morning
-     • Weekly:
-       /schedule weekly monday 09:00 Weekly report
-     • Working days:
-       /schedule working 08:00 Standup
-   • /schedule list
-   • /schedule delete ID
+📅 *Class Schedule Menu*
+────────────────────
+
+➕ Add Schedule
+
+• One-time
+  /schedule YYYY-MM-DD HH:MM Message
+  Example:
+  /schedule 2026-02-25 08:00 Meeting
+
+• Daily
+  /schedule daily HH:MM Message
+  Example:
+  /schedule daily 08:00 Good morning
+
+• Weekly
+  /schedule weekly monday HH:MM Message
+  Example:
+  /schedule weekly monday 09:00 Weekly report
+
+  (Available days:
+   sunday, monday, tuesday,
+   wednesday, thursday, friday, saturday)
+
+• Working Days (Monday–Friday)
+  /schedule working HH:MM Message
+  Example:
+  /schedule working 08:00 Standup
+
+────────────────────
+📋 View Schedules
+  /schedule list
+
+🗑 Delete Schedule
+  /schedule delete ID
+  Example:
+  /schedule delete 3
 
 💖 *Support*
    • /donate
