@@ -47,10 +47,10 @@ async function startBot() {
             const statusCode = lastDisconnect?.error?.output?.statusCode
 
             if (statusCode === DisconnectReason.loggedOut) {
-                console.log("Session logged out. Need to scan QR again.")
+                console.log("Session logged out. Need QR.")
             } else {
-                console.log("Reconnecting...")
-                startBot() // reconnect socket saja
+                console.log("Connection lost. Restarting via systemd...")
+                process.exit(1)
             }
         }
     })
