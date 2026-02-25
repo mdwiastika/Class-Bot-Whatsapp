@@ -20,7 +20,7 @@ async function startBot() {
     const sock = makeWASocket({
         auth: state,
         logger: P({ level: 'silent' }),
-        browser: Browsers.ubuntu("Desktop"),
+        browser: Browsers.baileys("Chrome"),
         markOnlineOnConnect: false
     })
 
@@ -34,6 +34,7 @@ async function startBot() {
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update
+        console.log("Connection update:", update)
 
         if (qr) {
             console.log(await QRCode.toString(qr, { type: "terminal", small: true }))
@@ -49,8 +50,8 @@ async function startBot() {
             if (statusCode === DisconnectReason.loggedOut) {
                 console.log("Session logged out. Need QR.")
             } else {
-                console.log("Connection lost. Restarting via systemd...")
-                process.exit(1)
+                console.log("Reconnecting... Reason:", statusCode)
+                startBot()
             }
         }
     })

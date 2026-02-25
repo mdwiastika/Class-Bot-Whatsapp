@@ -24,17 +24,25 @@ export async function useDbAuthState() {
 
         await pool.query(
             "INSERT INTO wa_sessions (id, data) VALUES ($1, $2)",
-            [SESSION_ID, data]
+            [
+                SESSION_ID,
+                JSON.parse(JSON.stringify(data, BufferJSON.replacer))
+            ]
         )
     } else {
-        data = JSON.parse(JSON.stringify(rows[0].data), BufferJSON.reviver)
+        data = JSON.parse(
+            JSON.stringify(rows[0].data),
+            BufferJSON.reviver
+        )
     }
 
     const writeData = async () => {
         await pool.query(
             "UPDATE wa_sessions SET data = $1, updated_at = NOW() WHERE id = $2",
-            [JSON.parse(JSON.stringify(data, BufferJSON.replacer)),
-                SESSION_ID]
+            [
+                JSON.parse(JSON.stringify(data, BufferJSON.replacer)),
+                SESSION_ID
+            ]
         )
     }
 
@@ -44,6 +52,7 @@ export async function useDbAuthState() {
             keys: {
                 get: async (type, ids) => {
                     const result = {}
+
                     for (const id of ids) {
                         let value = data.keys?.[type]?.[id]
 
@@ -53,6 +62,7 @@ export async function useDbAuthState() {
 
                         result[id] = value
                     }
+
                     return result
                 },
 
@@ -77,7 +87,6 @@ export async function useDbAuthState() {
         },
 
         saveCreds: async () => {
-            data.creds = data.creds
             await writeData()
         }
     }
