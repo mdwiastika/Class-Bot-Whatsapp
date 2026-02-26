@@ -70,8 +70,6 @@ ${s.message}
 
         const dayInput = args[1].toLowerCase()
 
-        let recurringDay
-
         if (!isNaN(dayInput)) {
             recurringDay = parseInt(dayInput)
             if (recurringDay < 0 || recurringDay > 6)
