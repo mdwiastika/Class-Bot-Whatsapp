@@ -23,7 +23,7 @@ async function startBot() {
     const sock = makeWASocket({
         auth: state,
         version,
-        logger: P({ level: 'info' }),
+        logger: P({ level: 'silent' }),
         browser: Browsers.macOS("Desktop"),
         markOnlineOnConnect: true,
     })
