@@ -1,8 +1,10 @@
 import 'dotenv/config'
 import makeWASocket, {
     DisconnectReason,
-    Browsers
+    Browsers,
+    fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys'
+
 import { useDbAuthState } from './services/dbAuthState.js'
 import P from 'pino'
 import QRCode from 'qrcode'
@@ -12,29 +14,24 @@ import { buildContext } from './bot/contextBuilder.js'
 import { startReminderScheduler } from "./services/reminderScheduler.js"
 import { startGlobalScheduler } from './services/scheduler.js'
 
-let isSchedulerStarted = false
+let schedulerStarted = false
 
 async function startBot() {
     const { state, saveCreds } = await useDbAuthState()
+    const { version } = await fetchLatestBaileysVersion()
 
     const sock = makeWASocket({
         auth: state,
-        logger: P({ level: 'silent' }),
-        browser: Browsers.baileys("Chrome"),
-        markOnlineOnConnect: false
+        version,
+        logger: P({ level: 'info' }),
+        browser: Browsers.macOS("Desktop"),
+        markOnlineOnConnect: true,
     })
-
-    if (!isSchedulerStarted) {
-        startReminderScheduler(sock)
-        startGlobalScheduler(sock)
-        isSchedulerStarted = true
-    }
 
     sock.ev.on('creds.update', saveCreds)
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update
-        console.log("Connection update:", update)
 
         if (qr) {
             console.log(await QRCode.toString(qr, { type: "terminal", small: true }))
@@ -42,6 +39,12 @@ async function startBot() {
 
         if (connection === "open") {
             console.log("Bot connected 🔥")
+
+            if (!schedulerStarted) {
+                startReminderScheduler(sock)
+                startGlobalScheduler(sock)
+                schedulerStarted = true
+            }
         }
 
         if (connection === "close") {
@@ -50,9 +53,11 @@ async function startBot() {
             if (statusCode === DisconnectReason.loggedOut) {
                 console.log("Session logged out. Need QR.")
             } else {
-                console.log("Reconnecting... Reason:", statusCode)
-                startBot()
+                console.log("Connection closed:", statusCode)
             }
+
+            // ❌ TIDAK ADA recursive startBot()
+            // Biarkan systemd yang restart kalau process crash
         }
     })
 

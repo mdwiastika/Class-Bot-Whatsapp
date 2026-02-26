@@ -10,8 +10,8 @@ export const shorthands = undefined;
  */
 export const up = (pgm) => {
     pgm.createTable("wa_sessions", {
-        id: { type: "varchar(50)", primaryKey: true },
-        data: { type: "jsonb", notNull: true },
+        id: { type: "text", primaryKey: true },
+        data: { type: "text", notNull: true },
         updated_at: {
             type: "timestamp",
             default: pgm.func("current_timestamp"),

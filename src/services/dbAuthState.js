@@ -1,93 +1,85 @@
 import pool from "../config/db.js"
 import {
     initAuthCreds,
-    proto,
-    BufferJSON
+    BufferJSON,
+    proto
 } from "@whiskeysockets/baileys"
 
-const SESSION_ID = "main"
+const SESSION_ID = "main" // Kamu bisa ganti ini kalau mau multi-session
 
 export async function useDbAuthState() {
 
-    const { rows } = await pool.query(
-        "SELECT data FROM wa_sessions WHERE id = $1",
-        [SESSION_ID]
-    )
-
-    let data
-
-    if (rows.length === 0) {
-        data = {
-            creds: initAuthCreds(),
-            keys: {}
+    // Fungsi internal untuk menulis ke database
+    const writeData = async (data, id) => {
+        try {
+            const jsonStr = JSON.stringify(data, BufferJSON.replacer);
+            await pool.query(
+                `INSERT INTO wa_sessions (id, data) VALUES ($1, $2)
+                 ON CONFLICT (id) DO UPDATE SET data = $2, updated_at = NOW()`,
+                [`${SESSION_ID}-${id}`, jsonStr]
+            );
+        } catch (err) {
+            console.error("DB Auth Write Error:", err);
         }
-
-        await pool.query(
-            "INSERT INTO wa_sessions (id, data) VALUES ($1, $2)",
-            [
-                SESSION_ID,
-                JSON.parse(JSON.stringify(data, BufferJSON.replacer))
-            ]
-        )
-    } else {
-        data = JSON.parse(
-            JSON.stringify(rows[0].data),
-            BufferJSON.reviver
-        )
     }
 
-    const writeData = async () => {
-        await pool.query(
-            "UPDATE wa_sessions SET data = $1, updated_at = NOW() WHERE id = $2",
-            [
-                JSON.parse(JSON.stringify(data, BufferJSON.replacer)),
-                SESSION_ID
-            ]
-        )
+    // Fungsi internal untuk membaca dari database
+    const readData = async (id) => {
+        try {
+            const { rows } = await pool.query(
+                "SELECT data FROM wa_sessions WHERE id = $1",
+                [`${SESSION_ID}-${id}`]
+            );
+            if (rows.length > 0) {
+                return JSON.parse(rows[0].data, BufferJSON.reviver);
+            }
+        } catch (error) {
+            return null;
+        }
+        return null;
     }
+
+    // Load credentials utama
+    const creds = await readData('creds') || initAuthCreds();
 
     return {
         state: {
-            creds: data.creds,
+            creds,
             keys: {
                 get: async (type, ids) => {
-                    const result = {}
-
-                    for (const id of ids) {
-                        let value = data.keys?.[type]?.[id]
-
-                        if (type === "app-state-sync-key" && value) {
-                            value = proto.Message.AppStateSyncKeyData.fromObject(value)
-                        }
-
-                        result[id] = value
-                    }
-
-                    return result
+                    const data = {};
+                    await Promise.all(
+                        ids.map(async id => {
+                            let value = await readData(`${type}-${id}`);
+                            if (type === 'app-state-sync-key' && value) {
+                                value = proto.Message.AppStateSyncKeyData.fromObject(value);
+                            }
+                            data[id] = value;
+                        })
+                    );
+                    return data;
                 },
-
                 set: async (newData) => {
+                    const tasks = [];
                     for (const category in newData) {
-                        data.keys[category] = data.keys[category] || {}
-
                         for (const id in newData[category]) {
-                            const value = newData[category][id]
-
+                            const value = newData[category][id];
+                            const keyId = `${category}-${id}`;
                             if (value) {
-                                data.keys[category][id] = value
+                                tasks.push(writeData(value, keyId));
                             } else {
-                                delete data.keys[category][id]
+                                tasks.push(
+                                    pool.query("DELETE FROM wa_sessions WHERE id = $1", [`${SESSION_ID}-${keyId}`])
+                                );
                             }
                         }
                     }
-
-                    await writeData()
+                    await Promise.all(tasks);
                 }
             }
         },
-
         saveCreds: async () => {
-            await writeData()
+            await writeData(creds, 'creds');
         }
     }
 }

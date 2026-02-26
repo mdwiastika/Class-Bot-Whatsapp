@@ -66,7 +66,7 @@ export const up = (pgm) => {
     pgm.createIndex(
         "schedule_messages",
         ["is_active", "schedule_time"],
-        { name: "idx_schedule_active_time" }
+        { name: "schedule_messages_idx_schedule_active_time" }
     );
 };
 
@@ -74,6 +74,9 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
 export const down = (pgm) => {
-    pgm.dropIndex("schedule_messages", "idx_schedule_active_time");
+    pgm.dropIndex("schedule_messages", ["is_active", "schedule_time"], {
+        name: "schedule_messages_idx_schedule_active_time",
+        ifExists: true
+    });
     pgm.dropTable("schedule_messages");
 };
