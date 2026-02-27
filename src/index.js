@@ -50,14 +50,15 @@ async function startBot() {
         if (connection === "close") {
             const statusCode = lastDisconnect?.error?.output?.statusCode
 
-            if (statusCode === DisconnectReason.loggedOut) {
-                console.log("Session logged out. Need QR.")
-            } else {
-                console.log("Connection closed:", statusCode)
-            }
+            console.log("Connection closed:", statusCode)
 
-            // ❌ TIDAK ADA recursive startBot()
-            // Biarkan systemd yang restart kalau process crash
+            if (statusCode === DisconnectReason.loggedOut) {
+                console.log("Session logged out. Need QR scan.")
+                process.exit(1) // restart
+            } else {
+                console.log("Unexpected disconnect. Restarting...")
+                process.exit(1) // 🔥 WAJIB EXIT
+            }
         }
     })
 
