@@ -216,7 +216,6 @@ Tunggu sebentar... 🕐
             })
 
             if (result.success) {
-                console.log("Logbook filled successfully:", result.data)
                 return reply(`
 ✅ *Logbook Berhasil Diisi!*
 

@@ -17,9 +17,6 @@ const MENTRY_PAGE = "https://online.mis.pens.ac.id/mEntry_Logbook_KP1.php"
  */
 export async function loginAndSubmitLogbook(email, password, logbookData) {
     try {
-        console.log("[PENS Logbook] Starting login & submit process...")
-        console.log("[PENS Logbook] Email:", email.substring(0, 8) + "***")
-
         const jar = new CookieJar()
         const client = wrapper(axios.create({
             jar,
@@ -28,34 +25,20 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
         }))
 
         // Step 1: Login via CAS
-        console.log("[PENS Logbook] Step 1: Logging in via CAS...")
         await loginCAS(client, email, password)
-        console.log("[PENS Logbook] ✅ CAS login successful")
 
         // Step 2: Get initial params & data
-        console.log("[PENS Logbook] Step 2: Fetching logbook data...")
         const data = await getLogbookData(client)
-        console.log("[PENS Logbook] ✅ Data fetched:", {
-            nrp: data.nrp,
-            tahun: data.valTahun,
-            semester: data.valSemester,
-            minggu: data.valMinggu,
-            matakuliah_count: data.matakuliahList.length
-        })
 
         // Step 3: Validate mata kuliah
         const matakuliahId = logbookData.matakuliah
         const selectedMatkul = data.matakuliahList.find(m => m.value === matakuliahId)
 
         if (!selectedMatkul) {
-            throw new Error(`Mata kuliah dengan ID "${matakuliahId}" tidak ditemukan. Pilihan: ${data.matakuliahList.map(m => m.value).join(", ")}`)
+            throw new Error(`Mata kuliah dengan ID "${matakuliahId}" tidak ditemukan`)
         }
 
-        console.log("[PENS Logbook] ✅ Mata kuliah found:", selectedMatkul.text)
-
         // Step 4: Submit logbook
-        console.log("[PENS Logbook] Step 3: Submitting logbook...")
-        
         const submitPayload = {
             valnrpMahasiswa: data.nrp,
             valTahun: data.valTahun,
@@ -74,11 +57,7 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
             sid: Math.random().toString(),
         }
         
-        console.log("[PENS Logbook] Mata kuliah value type:", typeof selectedMatkul.value, "Value:", selectedMatkul.value)
-        console.log("[PENS Logbook] Available mata kuliah values:", data.matakuliahList.slice(0, 3).map(m => ({value: m.value, text: m.text})))
-        console.log("[PENS Logbook] Submit payload:", JSON.stringify(submitPayload, null, 2))
-        
-        const submitRes = await client.post(
+        await client.post(
             LOGBOOK_PAGE,
             new URLSearchParams(submitPayload),
             {
@@ -87,18 +66,6 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
                 }
             }
         )
-
-        console.log("[PENS Logbook] Submit response status:", submitRes.status)
-        
-        // Check if response contains error messages
-        if (submitRes.data && typeof submitRes.data === 'string') {
-            if (submitRes.data.includes('Error') || submitRes.data.includes('error') || submitRes.data.includes('gagal')) {
-                console.log("[PENS Logbook] ⚠️  Response contains potential error:")
-                console.log(submitRes.data.substring(0, 500))
-            }
-        }
-        
-        console.log("[PENS Logbook] ✅ Logbook submitted successfully")
 
         return {
             success: true,
@@ -134,8 +101,6 @@ async function loginCAS(client, email, password) {
 
         if (!lt) throw new Error("LT token tidak ditemukan di halaman login")
 
-        console.log("[PENS Logbook] LT token:", lt.substring(0, 10) + "***")
-
         // Submit login
         let res
         try {
@@ -165,8 +130,6 @@ async function loginCAS(client, email, password) {
         const redirectUrl = res.headers.location
         if (!redirectUrl) throw new Error("Redirect URL tidak ditemukan setelah login")
 
-        console.log("[PENS Logbook] Redirect to:", redirectUrl.substring(0, 50) + "...")
-
         // Follow redirects
         await followRedirects(client, redirectUrl)
 
@@ -192,7 +155,6 @@ async function followRedirects(client, url) {
         } catch (err) {
             if (err.response?.status === 302) {
                 currentUrl = err.response.headers.location
-                console.log("[PENS Logbook] Redirect to:", currentUrl.substring(0, 50) + "...")
                 attempts++
             } else {
                 throw err
@@ -221,15 +183,6 @@ async function getLogbookData(client) {
 
         const $ = cheerio.load(res.data)
 
-        // Debug: log all form inputs to understand what fields are available
-        const allInputs = {}
-        $('input, select, textarea').each((i, el) => {
-            const name = $(el).attr('name')
-            const value = $(el).attr('value') || $(el).val()
-            if (name) allInputs[name] = value
-        })
-        console.log("[PENS Logbook] All form fields found:", Object.keys(allInputs).join(', '))
-
         // Extract NRP dari page (format: "NRP : 3123600041")
         const nrpText = $('td:contains("NRP")').text()
         const nrp = nrpText.match(/\d{10}/)?.[0]
@@ -240,8 +193,6 @@ async function getLogbookData(client) {
 
         const kp_daftar = $('#kp_daftar').val()
         const mahasiswa = $('#mahasiswa').val()
-
-        console.log("[PENS Logbook] Extracted form values:", { kp_daftar, mahasiswa, nrp })
 
         // Get mata kuliah list
         const matakuliahList = []
@@ -290,7 +241,6 @@ async function getInitialParams(client) {
         const valSemester = match[2]
         const valMinggu = match[3]
 
-        console.log("[PENS Logbook] Params:", { valTahun, valSemester, valMinggu })
 
         return { valTahun, valSemester, valMinggu }
 
@@ -304,8 +254,6 @@ async function getInitialParams(client) {
  */
 export async function getAvailableMatakuliah(email, password) {
     try {
-        console.log("[PENS Matkul] Fetching available mata kuliah...")
-
         const jar = new CookieJar()
         const client = wrapper(axios.create({
             jar,
@@ -318,8 +266,6 @@ export async function getAvailableMatakuliah(email, password) {
 
         // Get data
         const data = await getLogbookData(client)
-
-        console.log("[PENS Matkul] ✅ Found", data.matakuliahList.length, "mata kuliah")
 
         return {
             success: true,

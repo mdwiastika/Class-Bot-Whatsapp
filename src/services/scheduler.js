@@ -11,22 +11,18 @@ export function startGlobalScheduler(sock) {
 
     cron.schedule("* * * * *", async () => {
         try {
-            console.log("Running global scheduler check...") // Debug log
             const schedules = await getActiveSchedules()
 
             const now = new Date()
             const today = now.getDay()
             const hour = now.getHours()
             const minute = now.getMinutes()
-            console.log(`Current time: ${hour}:${minute}, Total active schedules: ${schedules.length}`) // Debug log
 
             for (const schedule of schedules) {
 
                 const scheduleDate = new Date(schedule.schedule_time)
-                console.log(`Checking schedule ID ${schedule.id} - Scheduled time: ${scheduleDate.toTimeString().slice(0, 5)}, Recurring: ${schedule.recurring_type}`) // Debug log
 
                 if (scheduleDate.getHours() !== hour || scheduleDate.getMinutes() !== minute) {
-                    console.log(`Skip ID ${schedule.id}: time mismatch`)
                     continue
                 }
 
@@ -37,7 +33,6 @@ export function startGlobalScheduler(sock) {
                         last.getHours() === hour &&
                         last.getMinutes() === minute
                     ) {
-                        console.log(`Skip ID ${schedule.id}: already sent today at this time`)
                         continue
                     }
                 }
@@ -65,8 +60,6 @@ export function startGlobalScheduler(sock) {
                 ) {
                     shouldSend = true
                 }
-
-                console.log(`ID ${schedule.id}: shouldSend=${shouldSend}, recurring_type=${schedule.recurring_type}, recurring_day=${schedule.recurring_day}, today=${today}, is_recurring=${schedule.is_recurring}`)
 
                 if (!shouldSend) continue
 
