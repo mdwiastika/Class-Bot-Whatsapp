@@ -4,6 +4,7 @@ import {
 } from "./commandHandlers.js"
 import { handleReminder } from "../handler/reminderHandler.js"
 import { handleDonate } from "../handler/donateHandler.js"
+import { handleLogbook } from "../handler/logbookHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
 
@@ -21,6 +22,9 @@ export async function routeMessage(context) {
 
         "/reminder": handleReminder,
         "/pengingat": handleReminder,
+
+        "/logbook": handleLogbook,
+        "/log": handleLogbook,
 
         "/task": handleTask,
         "/tugas": handleTask,

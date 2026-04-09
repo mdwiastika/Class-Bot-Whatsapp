@@ -20,11 +20,18 @@ export async function handleSchedule(context) {
 
     if (!args.length) {
         return reply(
-            `Format:
+            `
+📅 *Schedule Commands*
+
+Ketik: /menu schedule
+untuk bantuan lengkap ✨
+
+Quick format:
 /schedule 2026-02-25 08:00 Pesan
 /schedule daily 08:00 Pesan
-/schedule weekly 1 08:00 Pesan
-/schedule working 08:00 Pesan`
+/schedule weekly monday 08:00 Pesan
+/schedule working 08:00 Pesan
+`
         )
     }
 
@@ -32,24 +39,49 @@ export async function handleSchedule(context) {
         const schedules = await listSchedules(chatId)
 
         if (!schedules.length)
-            return reply("Tidak ada schedule.")
+            return reply(`
+📭 *Belum Ada Schedule*
 
-        const text = schedules.map(s =>
-            `ID: ${s.id}
-${s.message}
+Coba buat schedule baru:
+/schedule daily 08:00 Pesan
+`)
+
+        const text = schedules.map(s => {
+            const type = s.recurring_type ? `🔁 ${s.recurring_type.toUpperCase()}` : `⏱️  ONE-TIME`
+            return `
+╔════════════════════╗
+🆔 ID: ${s.id}
 ⏰ ${s.schedule_time}
-🔁 ${s.recurring_type ?? "one-time"}`
-        ).join("\n\n")
+${type}
+💬 ${s.message}
+╚════════════════════╝`
+        }).join("\n")
 
-        return reply(text)
+        return reply(`
+📋 *Daftar Schedule-mu*
+
+${text}
+
+Hapus:
+/schedule delete ID
+`)
     }
 
     if (args[0] === "delete") {
         const id = parseInt(args[1])
-        if (!id) return reply("Masukkan ID")
+        if (!id) return reply(`
+❌ *Format Salah!*
+
+Contoh:
+/schedule delete 3
+`)
 
         await deleteSchedule(id, chatId)
-        return reply("Schedule dihapus ✅")
+        return reply(`
+🗑️  *Schedule Dihapus* ✅
+
+ID ${id} sudah dihapus dari daftar.
+`)
     }
 
     let recurringType = null
@@ -66,22 +98,43 @@ ${s.message}
     else if (args[0] === "weekly") {
 
         if (args.length < 4)
-            return reply("Format: /schedule weekly monday 09:00 Your message")
+            return reply(`
+❌ *Format Salah!*
+
+Format yang benar:
+/schedule weekly [hari] HH:MM Pesan
+
+Contoh:
+/schedule weekly monday 09:00 Report mingguan
+
+Hari: sunday, monday, tuesday, wednesday, thursday, friday, saturday
+`)
 
         const dayInput = args[1].toLowerCase()
 
         if (!isNaN(dayInput)) {
             recurringDay = parseInt(dayInput)
             if (recurringDay < 0 || recurringDay > 6)
-                return reply("Day must be between 0 (Sunday) and 6 (Saturday)")
+                return reply(`
+❌ Hari harus 0-6
+0 = Minggu
+1 = Senin
+... dst
+`)
         }
 
         else {
             recurringDay = dayMap[dayInput]
             if (recurringDay === undefined)
-                return reply(
-                    "Invalid day.\nUse: sunday, monday, tuesday, wednesday, thursday, friday, saturday"
-                )
+                return reply(`
+❌ *Hari Tidak Valid*
+
+Gunakan:
+sunday, monday, tuesday, wednesday,
+thursday, friday, saturday
+
+Atau angka 0-6
+`)
         }
 
         recurringType = "weekly"
@@ -100,7 +153,12 @@ ${s.message}
         message = args.slice(2).join(" ")
     }
 
-    if (!message) return reply("Pesan tidak boleh kosong")
+    if (!message) return reply(`
+❌ *Pesan Tidak Boleh Kosong!*
+
+Contoh lengkap:
+/schedule daily 08:00 Selamat pagi semuanya!
+`)
 
     await createSchedule({
         groupId: chatId,
@@ -110,5 +168,19 @@ ${s.message}
         recurringDay
     })
 
-    return reply("Schedule berhasil dibuat ✅")
+    const typeLabel = !recurringType ? "⏱️  One-Time" :
+        recurringType === "daily" ? "☀️  Setiap Hari" :
+        recurringType === "weekly" ? "📍 Mingguan" :
+        "💼 Hari Kerja"
+
+    return reply(`
+✅ *Schedule Berhasil Dibuat!*
+
+${typeLabel}
+⏰ ${scheduleTime.toTimeString().slice(0, 5)}
+💬 ${message}
+
+✨ Lihat semua:
+/schedule list
+`)
 }

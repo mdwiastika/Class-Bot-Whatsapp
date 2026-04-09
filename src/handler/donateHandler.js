@@ -1,29 +1,46 @@
 import { enqueueMessage } from "../services/messageQueue.js"
+
 export async function handleDonate({ sock, groupId }) {
     return enqueueMessage(sock, groupId, {
         text: `
-💖 *Support Class Manager Bot*
+╔════════════════════════╗
+║ 💖 SUPPORT BOT INI     ║
+╚════════════════════════╝
 
-Terima kasih sudah menggunakan bot ini 🙏  
-Jika kamu merasa bot ini membantu, kamu bisa mendukung pengembangannya melalui:
+🙏 *Terima kasih sudah pakai bot ini!*
 
-━━━━━━━━━━━━━━━━━━
+Jika bot ini membantu & bermanfaat,
+kamu bisa mendukung pengembangannya 💪
 
-👤 *A/N* Marcel Dwi Astika
+────────────────────
 
-🏦 *BCA*
-0501165076
+👤 *A/N: Marcel Dwi Astika*
 
-🏦 *SeaBank*
-901770566633
+*🏦 TRANSFER BANK*
 
-📱 *E-Wallet*
-OVO / DANA / GoPay / ShopeePay
+💳 *BCA*
+   0501165076
+
+💳 *SeaBank*
+   901770566633
+
+────────────────────
+
+*📱 E-WALLET*
 0895339390753
 
-━━━━━━━━━━━━━━━━━━
-Setiap dukungan sangat berarti untuk pengembangan fitur dan maintenance bot 🚀
-Terima kasih banyak! 🙌
+Tersedia di:
+🔸 OVO
+🔸 DANA  
+🔸 GoPay
+🔸 ShopeePay
+
+────────────────────
+
+✨ Setiap donasi sangat berarti!
+🔥 Membantu develop fitur baru
+⚙️  Maintenance & support
+🚀 Terima kasih banyak! 🙌
 `
     })
 }

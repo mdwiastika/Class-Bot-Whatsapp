@@ -15,11 +15,14 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
             text: `
 🔔 *Reminder Commands*
 
+Ketik: /menu reminder
+untuk melihat bantuan lengkap ✨
+
+Quick:
 /reminder add HH:MM
 /reminder list
 /reminder delete HH:MM
-/reminder on HH:MM
-/reminder off HH:MM
+/reminder on/off HH:MM
 `
         })
     }
@@ -31,14 +34,32 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
         if (!time || !/^\d{2}:\d{2}$/.test(time)) {
             return enqueueMessage(sock, groupId, {
-                text: "❌ Format salah.\nContoh: /reminder add 20:30"
+                text: `
+❌ *Format Salah!*
+
+Format yang benar:
+/reminder add HH:MM
+
+📌 Contoh:
+/reminder add 20:30
+
+Gunakan format 24-jam (00:00 - 23:59)
+`
             })
         }
 
         await createReminder(groupId, userNumber, time)
 
         return enqueueMessage(sock, groupId, {
-            text: `✅ Reminder berhasil ditambahkan jam ${time}`
+            text: `
+✅ *Reminder Berhasil Ditambahkan!*
+
+⏰ Jam: ${time}
+📌 Kamu akan diingatkan setiap hari jam ${time}
+
+Ketik: /reminder list
+Untuk melihat semua reminder-mu 📋
+`
         })
     }
 
@@ -48,17 +69,38 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
         if (reminders.length === 0) {
             return enqueueMessage(sock, groupId, {
-                text: "📭 Kamu belum punya reminder."
+                text: `
+📭 *Belum Ada Reminder*
+
+Kamu belum punya pengingat logbook.
+
+Coba tambahkan:
+/reminder add 20:30
+`
             })
         }
 
         const formatted = reminders.map(r => {
-            const status = r.is_active ? "🟢 ON" : "🔴 OFF"
-            return `• ${r.reminder_time} (${status})`
+            const status = r.is_active ? "✅ AKTIF" : "⏸️  MATI"
+            return `  ⏰ ${r.reminder_time}  ${status}`
         }).join("\n")
 
         return enqueueMessage(sock, groupId, {
-            text: `🔔 *Your Reminders*\n\n${formatted}`
+            text: `
+╔════════════════════╗
+║ 📋 REMINDER-MU     ║
+╚════════════════════╝
+
+${formatted}
+
+────────────────────
+✨ Total: ${reminders.length} reminder
+
+🔧 Untuk mengubah:
+/reminder on HH:MM  → Aktifkan
+/reminder off HH:MM → Nonaktifkan
+/reminder delete HH:MM → Hapus
+`
         })
     }
 
@@ -67,14 +109,26 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
         if (!time) {
             return enqueueMessage(sock, groupId, {
-                text: "Contoh: /reminder delete 20:30"
+                text: `
+❌ *Format Salah!*
+
+Contoh:
+/reminder delete 20:30
+`
             })
         }
 
         await deleteReminder(groupId, userNumber, time)
 
         return enqueueMessage(sock, groupId, {
-            text: `🗑 Reminder ${time} berhasil dihapus`
+            text: `
+🗑️  *Reminder Dihapus*
+
+Reminder jam ${time} sudah dihapus ✅
+
+Ketik: /reminder list
+Untuk lihat reminder lainnya
+`
         })
     }
 
@@ -83,14 +137,26 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
         if (!time) {
             return enqueueMessage(sock, groupId, {
-                text: "Contoh: /reminder off 20:30"
+                text: `
+❌ *Format Salah!*
+
+Contoh:
+/reminder off 20:30
+`
             })
         }
 
         await toggleReminder(groupId, userNumber, time, false)
 
         return enqueueMessage(sock, groupId, {
-            text: `⏸ Reminder ${time} dimatikan`
+            text: `
+⏸️  *Reminder Dimatikan*
+
+Reminder jam ${time} sekarang MATI 🔴
+
+Nyalakan lagi:
+/reminder on ${time}
+`
         })
     }
 
@@ -99,14 +165,26 @@ export async function handleReminder({ sock, groupId, userNumber, text }) {
 
         if (!time) {
             return enqueueMessage(sock, groupId, {
-                text: "Contoh: /reminder on 20:30"
+                text: `
+❌ *Format Salah!*
+
+Contoh:
+/reminder on 20:30
+`
             })
         }
 
         await toggleReminder(groupId, userNumber, time, true)
 
         return enqueueMessage(sock, groupId, {
-            text: `▶ Reminder ${time} diaktifkan`
+            text: `
+✅ *Reminder Diaktifkan*
+
+Reminder jam ${time} sekarang AKTIF 🟢
+
+Matikan lagi:
+/reminder off ${time}
+`
         })
     }
 }
