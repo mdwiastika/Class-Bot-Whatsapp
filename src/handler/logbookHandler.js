@@ -1,378 +1,182 @@
-import { enqueueMessage } from "../services/messageQueue.js"
 import { saveUserCredentials, getUserCredentials, deleteUserCredentials } from "../repositories/userCredentialsRepository.js"
 import { getAvailableMatakuliah, loginAndSubmitLogbook, formatMatakuliahList } from "../services/pensLogbookService.js"
+import { validateUserCredentials } from "../utils/credentialValidator.js"
+import { isValidTimeRange } from "../utils/validation.js"
 
+// ============================================================================
+// HANDLER: Setup credentials
+// ============================================================================
+async function handleLogbookSetup(context) {
+    const { args, sender, groupId, reply } = context
+    const [, email, password] = args
+
+    if (!email || !password) {
+        return reply(`❌ *Format Salah!*\n\nFormat: /logbook setup email@pens.ac.id password\n\n🔐 Password akan disimpan terenkripsi di database!`)
+    }
+
+    try {
+        await saveUserCredentials(sender, groupId, email, password)
+        return reply(`✅ *Credentials Berhasil Disimpan!*\n\n📧 Email: ${email}\n🔐 Password: ****(aman)\n\nSekarang kamu bisa:\n1️⃣ /logbook matkul\n2️⃣ /logbook fill [ID] [jam] [jam] "kegiatan"\n\nHapus: /logbook delete`)
+    } catch (error) {
+        console.error("Setup error:", error)
+        return reply(`❌ *Error!*\n\nGagal menyimpan credentials.\nCoba lagi atau hubungi admin.`)
+    }
+}
+
+// ============================================================================
+// HANDLER: List available mata kuliah
+// ============================================================================
+async function handleLogbookMatkul(context) {
+    const { sender, reply } = context
+
+    try {
+        const credsResult = await validateUserCredentials(sender, reply)
+        if (!credsResult) return
+
+        await reply(`🔄 *Ambil daftar mata kuliah...*\n⏳ Login ke PENS...\n📚 Fetch matkul...\nTunggu sebentar...`)
+
+        const { creds } = credsResult
+        const result = await getAvailableMatakuliah(creds.email, creds.password)
+
+        if (!result.success) {
+            return reply(`❌ *Gagal Ambil Mata Kuliah!*\n\n${result.message}\n\nSolusi: /logbook setup email password`)
+        }
+
+        return reply(formatMatakuliahList(result.data.matakuliah))
+    } catch (error) {
+        console.error("Matkul error:", error)
+        return reply(`❌ *Error!*\n\n${error.message}\n\nGagal mengambil mata kuliah.`)
+    }
+}
+
+// ============================================================================
+// HANDLER: Fill logbook entry
+// ============================================================================
+async function handleLogbookFill(context) {
+    const { args, sender, reply } = context
+
+    try {
+        const credsResult = await validateUserCredentials(sender, reply)
+        if (!credsResult) return
+
+        const [, matakuliahNumber, jamMulai, jamSelesai, ...kegiatanArray] = args
+        const kegiatan = kegiatanArray.join(" ").replace(/"/g, '')
+
+        if (!matakuliahNumber || !jamMulai || !jamSelesai || !kegiatan) {
+            return reply(`❌ *Format Salah!*\n\n/logbook fill NOMOR JAM_MULAI JAM_SELESAI "KEGIATAN"\n\nContoh: /logbook fill 1 07:00 16:00 "Belajar chapter 5"`)
+        }
+
+        const timeValidation = isValidTimeRange(jamMulai, jamSelesai)
+        if (!timeValidation.valid) {
+            return reply(`❌ *Format Jam Salah!*\n\n${timeValidation.error}\n\nFormat: HH:MM (24-jam)`)
+        }
+
+        await reply(`🔄 *Isi Logbook...*\n⏳ Login...\n📝 Validasi...\n🚀 Submit...`)
+
+        const { creds } = credsResult
+        const matkResult = await getAvailableMatakuliah(creds.email, creds.password)
+        if (!matkResult.success) {
+            return reply(`❌ *Gagal Ambil Mata Kuliah!*\n\n${matkResult.message}`)
+        }
+
+        const matakuliahIndex = parseInt(matakuliahNumber) - 1
+        const matkList = matkResult.data.matakuliah
+        if (isNaN(matakuliahIndex) || matakuliahIndex < 0 || matakuliahIndex >= matkList.length) {
+            return reply(`❌ *Nomor Tidak Valid!*\n\n${formatMatakuliahList(matkList)}`)
+        }
+
+        const selectedMatkul = matkList[matakuliahIndex]
+        const submitResult = await loginAndSubmitLogbook(creds.email, creds.password, {
+            matakuliah: selectedMatkul.value,
+            jam_mulai: jamMulai,
+            jam_selesai: jamSelesai,
+            kegiatan: kegiatan,
+            sesuai_kuliah: "1"
+        })
+
+        if (submitResult.success) {
+            return reply(`✅ *Logbook Berhasil Diisi!*\n\n📚 ${submitResult.data.matakuliah}\n📅 ${submitResult.data.tanggal}\n⏰ ${submitResult.data.jam_mulai} - ${submitResult.data.jam_selesai}`)
+        }
+
+        return reply(`❌ *Gagal Isi Logbook!*\n\n${submitResult.message}`)
+
+    } catch (error) {
+        console.error("Fill error:", error)
+        return reply(`❌ *Error!*\n\n${error.message}\n\nGagal mengisi logbook.`)
+    }
+}
+
+// ============================================================================
+// HANDLER: Show stored credentials info
+// ============================================================================
+async function handleLogbookInfo(context) {
+    const { sender, reply } = context
+
+    try {
+        const creds = await getUserCredentials(sender)
+        if (!creds) {
+            return reply(`📭 *Belum Ada Credentials*\n\nSetup: /logbook setup email@pens.ac.id password`)
+        }
+
+        const created = new Date(creds.created_at).toLocaleDateString('id-ID')
+        return reply(`📋 *INFO CREDENTIALS*\n\n📧 Email: ${creds.email}\n🔐 Password: ****(aman)\n📅 Setup: ${created}\n\nPerintah:\n/logbook matkul\n/logbook fill\n/logbook delete`)
+
+    } catch (error) {
+        console.error("Info error:", error)
+        return reply(`❌ *Error!*\n\nGagal mengambil info.`)
+    }
+}
+
+// ============================================================================
+// HANDLER: Delete stored credentials
+// ============================================================================
+async function handleLogbookDelete(context) {
+    const { sender, reply } = context
+
+    try {
+        const creds = await getUserCredentials(sender)
+        if (!creds) {
+            return reply(`📭 *Belum Ada Credentials*\n\nTidak ada yang bisa dihapus.`)
+        }
+
+        await deleteUserCredentials(sender)
+        return reply(`🗑️  *Credentials Dihapus* ✅\n\nSetup lagi: /logbook setup email password`)
+
+    } catch (error) {
+        console.error("Delete error:", error)
+        return reply(`❌ *Error!*\n\nGagal menghapus credentials.`)
+    }
+}
+
+// ============================================================================
+// ACTION DISPATCHER
+// ============================================================================
+const actionHandlers = {
+    setup: handleLogbookSetup,
+    matkul: handleLogbookMatkul,
+    'info-matkul': handleLogbookMatkul,
+    'info-matkul-id': handleLogbookMatkul,
+    fill: handleLogbookFill,
+    info: handleLogbookInfo,
+    delete: handleLogbookDelete,
+}
+
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 export async function handleLogbook(context) {
-    const { args, groupId, sender, reply } = context
+    const { args, reply } = context
 
     if (!args.length) {
-        return reply(`
-📖 *LOGBOOK COMMANDS*
-
-Ketik: /menu logbook
-untuk melihat bantuan lengkap ✨
-
-Quick:
-/logbook setup email password
-/logbook matkul (atau /logbook info-matkul)
-/logbook fill NOMOR jam_mulai jam_selesai kegiatan
-/logbook info
-/logbook delete
-`)
+        return reply(`📖 *LOGBOOK COMMANDS*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill NOMOR jam_mulai jam_selesai kegiatan\n/logbook info\n/logbook delete`)
     }
 
     const action = args[0].toLowerCase()
+    const handler = actionHandlers[action]
 
-    // ==================== SETUP ====================
-    if (action === "setup") {
-        const email = args[1]
-        const password = args[2]
-
-        if (!email || !password) {
-            return reply(`
-❌ *Format Salah!*
-
-Format yang benar:
-/logbook setup email@pens.ac.id password
-
-🔐 Password akan disimpan terenkripsi di database!
-
-Contoh:
-/logbook setup mdwiastika@it.student.pens.ac.id MyPassword123
-`)
-        }
-
-        try {
-            await saveUserCredentials(sender, groupId, email, password)
-
-            return reply(`
-✅ *Credentials Berhasil Disimpan!*
-
-📧 Email: ${email}
-🔐 Password: ****(tersimpan aman)
-
-Sekarang kamu bisa:
-
-1️⃣  /logbook matkul
-   → Lihat daftar mata kuliah
-
-2️⃣  /logbook fill [ID] [jam_mulai] [jam_selesai] "kegiatan"
-   → Isi logbook langsung
-
-Untuk hapus:
-/logbook delete
-`)
-        } catch (error) {
-            console.error("Setup credentials error:", error)
-            return reply(`
-❌ *Error!*
-
-Gagal menyimpan credentials.
-Coba lagi atau hubungi admin.
-`)
-        }
+    if (!handler) {
+        return reply(`❌ *Action Tidak Dikenal!*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill NOMOR jam_mulai jam_selesai kegiatan\n/logbook info\n/logbook delete`)
     }
 
-    if (action === "matkul" || action === "info-matkul" || action === "info-matkul-id") {
-        try {
-            const creds = await getUserCredentials(sender)
-
-            if (!creds) {
-                return reply(`
-⚠️  *Belum Setup!*
-
-Kamu harus setup credentials dulu:
-/logbook setup email@pens.ac.id password
-
-Setup sekarang, lalu coba lagi!
-`)
-            }
-
-            await reply(`
-🔄 *Sedang ambil daftar mata kuliah...*
-
-⏳ Login ke sistem PENS...
-📚 Fetch daftar mata kuliah...
-📋 Extract mata kuliah ID...
-
-Tunggu sebentar... 🕐
-`)
-
-            const result = await getAvailableMatakuliah(creds.email, creds.password)
-
-            if (!result.success) {
-                return reply(`
-❌ *Gagal Ambil Mata Kuliah!*
-
-${result.message}
-
-💡 Kemungkinan:
-• Email/Password salah
-• Server PENS sedang offline
-• Koneksi internet error
-
-Solusi:
-/logbook setup email@pens.ac.id password
-→ untuk setup ulang credentials
-`)
-            }
-
-            const formattedList = formatMatakuliahList(result.data.matakuliah)
-
-            return reply(formattedList)
-
-        } catch (error) {
-            console.error("Matkul error:", error)
-            return reply(`
-❌ *Error!*
-
-${error.message}
-
-Gagal mengambil daftar mata kuliah.
-Coba lagi atau hubungi admin.
-`)
-        }
-    }
-
-    if (action === "fill") {
-        try {
-            const creds = await getUserCredentials(sender)
-
-            if (!creds) {
-                return reply(`
-⚠️  *Belum Setup!*
-
-Kamu harus setup credentials dulu:
-/logbook setup email@pens.ac.id password
-
-Setup sekarang, lalu coba lagi!
-`)
-            }
-
-            const matakuliahNumber = args[1]
-            const jamMulai = args[2]
-            const jamSelesai = args[3]
-            const kegiatan = args.slice(4).join(" ").replace(/"/g, '')
-            const sesuaiKuliah = "1"
-
-            if (!matakuliahNumber || !jamMulai || !jamSelesai || !kegiatan) {
-                return reply(`
-❌ *Format Salah!*
-
-Format yang benar:
-/logbook fill NOMOR JAM_MULAI JAM_SELESAI "KEGIATAN"
-
-Contoh:
-/logbook fill 1 07:00 16:00 "Belajar chapter 5"
-
-NOMOR: Dari daftar /logbook matkul (1, 2, 3, dst)
-JAM format: HH:MM (24-jam)
-
-Help:
-/logbook matkul
-→ Lihat daftar mata kuliah
-`)
-            }
-
-            if (!/^\d{2}:\d{2}$/.test(jamMulai) || !/^\d{2}:\d{2}$/.test(jamSelesai)) {
-                return reply(`
-❌ *Format Jam Salah!*
-
-Format harus: HH:MM (24-jam)
-
-Contoh benar:
-• 07:00 (jam 7 pagi)
-• 16:00 (jam 4 sore)
-• 23:59 (jam 11:59 malam)
-
-Coba lagi!
-`)
-            }
-
-            await reply(`
-🔄 *Proses Isi Logbook...*
-
-⏳ Login ke sistem PENS...
-📝 Validasi mata kuliah...
-🚀 Submit logbook...
-
-Tunggu sebentar... 🕐
-`)
-
-            const result = await getAvailableMatakuliah(creds.email, creds.password)
-            if (!result.success) {
-                return reply(`
-❌ *Gagal Ambil Mata Kuliah!*
-
-${result.message}
-
-Kemungkinan:
-• Email/Password salah
-• Server PENS sedang offline
-• Koneksi internet error
-
-Coba lagi:
-/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"
-`)
-            }
-
-            const matakuliahIndex = parseInt(matakuliahNumber) - 1
-            if (isNaN(matakuliahIndex) || matakuliahIndex < 0 || matakuliahIndex >= result.data.matakuliah.length) {
-                return reply(`
-❌ *Nomor Mata Kuliah Tidak Valid!*
-
-Daftar mata kuliah:
-${formatMatakuliahList(result.data.matakuliah)}
-`)
-            }
-
-            const selectedMatkul = result.data.matakuliah[matakuliahIndex]
-
-            const submitResult = await loginAndSubmitLogbook(creds.email, creds.password, {
-                matakuliah: selectedMatkul.value,
-                jam_mulai: jamMulai,
-                jam_selesai: jamSelesai,
-                kegiatan: kegiatan,
-                sesuai_kuliah: sesuaiKuliah
-            })
-
-            if (submitResult.success) {
-                return reply(`
-✅ *Logbook Berhasil Diisi!*
-
-╔════════════════════════════════╗
-📚 Mata Kuliah: ${submitResult.data.matakuliah}
-📅 Tanggal: ${submitResult.data.tanggal}
-⏰ Jam: ${submitResult.data.jam_mulai} - ${submitResult.data.jam_selesai}
-💬 Kegiatan: ${submitResult.data.kegiatan}
-✅ Sesuai Kuliah: ${submitResult.data.sesuai_kuliah === '1' ? 'Ya' : 'Tidak'}
-╚════════════════════════════════╝
-
-🎉 Logbook sudah tersimpan di sistem PENS!
-
-📌 Tips:
-• Gunakan /logbook fill untuk isi logbook lagi
-• /logbook matkul untuk lihat daftar mata kuliah
-`)
-            } else {
-                return reply(`
-❌ *Gagal Isi Logbook!*
-
-${submitResult.message}
-
-Kemungkinan:
-• Email/Password salah
-• Server PENS sedang offline
-• Format data tidak valid
-
-Solusi:
-1. /logbook matkul → Cek daftar mata kuliah
-2. /logbook setup → Jika password berubah
-3. Coba lagi dalam beberapa saat
-`)
-            }
-
-        } catch (error) {
-            console.error("Fill logbook error:", error)
-            return reply(`
-❌ *Error!*
-
-${error.message}
-
-Gagal mengisi logbook.
-Coba lagi atau hubungi admin.
-`)
-        }
-    }
-
-    if (action === "info") {
-        try {
-            const creds = await getUserCredentials(sender)
-
-            if (!creds) {
-                return reply(`
-📭 *Belum Ada Credentials*
-
-Kamu belum setup email & password.
-
-Setup sekarang:
-/logbook setup email@pens.ac.id password
-`)
-            }
-
-            return reply(`
-╔════════════════════════════════╗
-║ 📋 INFO CREDENTIALS            ║
-╚════════════════════════════════╝
-
-📧 Email: ${creds.email}
-🔐 Password: ****(tersimpan aman)
-📅 Setup pada: ${new Date(creds.created_at).toLocaleDateString('id-ID')}
-🕒 Update: ${new Date(creds.updated_at).toLocaleDateString('id-ID')}
-
-✨ Status: Siap digunakan!
-
-Perintah:
-/logbook matkul → Daftar mata kuliah
-/logbook fill → Isi logbook
-/logbook delete → Hapus credentials
-`)
-        } catch (error) {
-            console.error("Get info error:", error)
-            return reply(`
-❌ *Error!*
-
-Gagal mengambil informasi.
-Coba lagi atau hubungi admin.
-`)
-        }
-    }
-
-    if (action === "delete") {
-        try {
-            const creds = await getUserCredentials(sender)
-
-            if (!creds) {
-                return reply(`
-📭 *Belum Ada Credentials*
-
-Tidak ada yang bisa dihapus.
-`)
-            }
-
-            await deleteUserCredentials(sender)
-
-            return reply(`
-🗑️  *Credentials Dihapus* ✅
-
-Email & password sudah dihapus dari database.
-Data aman, tidak ada informasi yang tertinggal.
-
-Untuk setup lagi:
-/logbook setup email@pens.ac.id password
-`)
-        } catch (error) {
-            console.error("Delete credentials error:", error)
-            return reply(`
-❌ *Error!*
-
-Gagal menghapus credentials.
-Coba lagi atau hubungi admin.
-`)
-        }
-    }
-
-    return reply(`
-❌ *Action Tidak Dikenal!*
-
-Pilihan:
-/logbook setup email password
-/logbook matkul
-/logbook fill NOMOR jam_mulai jam_selesai kegiatan
-/logbook info
-/logbook delete
-
-Ketik: /menu logbook
-untuk bantuan lengkap
-`)
+    return handler(context)
 }

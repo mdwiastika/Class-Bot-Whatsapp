@@ -4,7 +4,6 @@ import {
     deleteSchedule
 } from "../services/scheduleService.js"
 
-
 const dayMap = {
     sunday: 0,
     monday: 1,
@@ -16,11 +15,10 @@ const dayMap = {
 }
 
 export async function handleSchedule(context) {
-    const { args, chatId, reply } = context
+    const { args, groupId, reply } = context
 
     if (!args.length) {
-        return reply(
-            `
+        return reply(`
 📅 *Schedule Commands*
 
 Ketik: /menu schedule
@@ -31,12 +29,11 @@ Quick format:
 /schedule daily 08:00 Pesan
 /schedule weekly monday 08:00 Pesan
 /schedule working 08:00 Pesan
-`
-        )
+`)
     }
 
     if (args[0] === "list") {
-        const schedules = await listSchedules(chatId)
+        const schedules = await listSchedules(groupId)
 
         if (!schedules.length)
             return reply(`
@@ -76,7 +73,7 @@ Contoh:
 /schedule delete 3
 `)
 
-        await deleteSchedule(id, chatId)
+        await deleteSchedule(id, groupId)
         return reply(`
 🗑️  *Schedule Dihapus* ✅
 
@@ -161,7 +158,7 @@ Contoh lengkap:
 `)
 
     await createSchedule({
-        groupId: chatId,
+        groupId: groupId,
         message,
         scheduleTime,
         recurringType,

@@ -1,8 +1,7 @@
-import { enqueueMessage } from "../services/messageQueue.js"
+export async function handleDonate(context) {
+    const { reply } = context
 
-export async function handleDonate({ sock, groupId }) {
-    return enqueueMessage(sock, groupId, {
-        text: `
+    return reply(`
 ╔════════════════════════╗
 ║ 💖 SUPPORT BOT INI     ║
 ╚════════════════════════╝
@@ -41,6 +40,5 @@ Tersedia di:
 🔥 Membantu develop fitur baru
 ⚙️  Maintenance & support
 🚀 Terima kasih banyak! 🙌
-`
-    })
+`)
 }
