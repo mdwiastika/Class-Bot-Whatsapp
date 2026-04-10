@@ -1,11 +1,3 @@
-/**
- * Service untuk hit API logbook web lain
- * 
- * IMPLEMENTASI:
- * Sesuaikan URL_LOGIN, URL_SUBMIT, dan logic submit
- * dengan endpoint API dari web logbook target
- */
-
 const API_BASE_URL = process.env.LOGBOOK_API_URL || "https://logbook-api.example.com"
 
 export async function loginAndFillLogbook(email, password, logbookData = {}) {
