@@ -15,7 +15,7 @@ untuk melihat bantuan lengkap ✨
 Quick:
 /logbook setup email password
 /logbook matkul (atau /logbook info-matkul)
-/logbook fill MATKUL_ID jam_mulai jam_selesai kegiatan
+/logbook fill NOMOR jam_mulai jam_selesai kegiatan
 /logbook info
 /logbook delete
 `)
@@ -153,30 +153,29 @@ Setup sekarang, lalu coba lagi!
             }
 
             // Parse arguments
-            const matakuliahId = args[1]
+            const matakuliahNumber = args[1]
             const jamMulai = args[2]
             const jamSelesai = args[3]
             const kegiatan = args.slice(4).join(" ").replace(/"/g, '')
             const sesuaiKuliah = "1"
 
             // Validate arguments
-            if (!matakuliahId || !jamMulai || !jamSelesai || !kegiatan) {
+            if (!matakuliahNumber || !jamMulai || !jamSelesai || !kegiatan) {
                 return reply(`
 ❌ *Format Salah!*
 
 Format yang benar:
-/logbook fill MATKUL_ID JAM_MULAI JAM_SELESAI "KEGIATAN" [SESUAI]
+/logbook fill NOMOR JAM_MULAI JAM_SELESAI "KEGIATAN"
 
 Contoh:
-/logbook fill 2 07:00 16:00 "Belajar chapter 5"
+/logbook fill 1 07:00 16:00 "Belajar chapter 5"
 
-MATKUL_ID: Cek dengan /logbook matkul
+NOMOR: Dari daftar /logbook matkul (1, 2, 3, dst)
 JAM format: HH:MM (24-jam)
-SESUAI: 1 (default) atau 0
 
 Help:
 /logbook matkul
-→ Lihat daftar mata kuliah & ID
+→ Lihat daftar mata kuliah
 `)
             }
 
@@ -206,25 +205,55 @@ Coba lagi!
 Tunggu sebentar... 🕐
 `)
 
+            // Get matakuliah list to convert number to ID
+            const result = await getAvailableMatakuliah(creds.email, creds.password)
+            if (!result.success) {
+                return reply(`
+❌ *Gagal Ambil Mata Kuliah!*
+
+${result.message}
+
+Kemungkinan:
+• Email/Password salah
+• Server PENS sedang offline
+• Koneksi internet error
+
+Coba lagi:
+/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"
+`)
+            }
+
+            const matakuliahIndex = parseInt(matakuliahNumber) - 1
+            if (isNaN(matakuliahIndex) || matakuliahIndex < 0 || matakuliahIndex >= result.data.matakuliah.length) {
+                return reply(`
+❌ *Nomor Mata Kuliah Tidak Valid!*
+
+Daftar mata kuliah:
+${formatMatakuliahList(result.data.matakuliah)}
+`)
+            }
+
+            const selectedMatkul = result.data.matakuliah[matakuliahIndex]
+
             // Submit logbook
-            const result = await loginAndSubmitLogbook(creds.email, creds.password, {
-                matakuliah: matakuliahId,
+            const submitResult = await loginAndSubmitLogbook(creds.email, creds.password, {
+                matakuliah: selectedMatkul.value,
                 jam_mulai: jamMulai,
                 jam_selesai: jamSelesai,
                 kegiatan: kegiatan,
                 sesuai_kuliah: sesuaiKuliah
             })
 
-            if (result.success) {
+            if (submitResult.success) {
                 return reply(`
 ✅ *Logbook Berhasil Diisi!*
 
 ╔════════════════════════════════╗
-📚 Mata Kuliah: ${result.data.matakuliah}
-📅 Tanggal: ${result.data.tanggal}
-⏰ Jam: ${result.data.jam_mulai} - ${result.data.jam_selesai}
-💬 Kegiatan: ${result.data.kegiatan}
-✅ Sesuai Kuliah: ${result.data.sesuai_kuliah === '1' ? 'Ya' : 'Tidak'}
+📚 Mata Kuliah: ${submitResult.data.matakuliah}
+📅 Tanggal: ${submitResult.data.tanggal}
+⏰ Jam: ${submitResult.data.jam_mulai} - ${submitResult.data.jam_selesai}
+💬 Kegiatan: ${submitResult.data.kegiatan}
+✅ Sesuai Kuliah: ${submitResult.data.sesuai_kuliah === '1' ? 'Ya' : 'Tidak'}
 ╚════════════════════════════════╝
 
 🎉 Logbook sudah tersimpan di sistem PENS!
@@ -237,16 +266,15 @@ Tunggu sebentar... 🕐
                 return reply(`
 ❌ *Gagal Isi Logbook!*
 
-${result.message}
+${submitResult.message}
 
 Kemungkinan:
-• Mata kuliah ID tidak sesuai
 • Email/Password salah
 • Server PENS sedang offline
 • Format data tidak valid
 
 Solusi:
-1. /logbook matkul → Cek ID yang benar
+1. /logbook matkul → Cek daftar mata kuliah
 2. /logbook setup → Jika password berubah
 3. Coba lagi dalam beberapa saat
 `)
@@ -350,7 +378,7 @@ Coba lagi atau hubungi admin.
 Pilihan:
 /logbook setup email password
 /logbook matkul
-/logbook fill ID jam_mulai jam_selesai kegiatan
+/logbook fill NOMOR jam_mulai jam_selesai kegiatan
 /logbook info
 /logbook delete
 

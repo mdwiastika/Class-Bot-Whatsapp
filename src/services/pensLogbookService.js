@@ -224,8 +224,8 @@ export async function getAvailableMatakuliah(email, password) {
 export function formatMatakuliahList(matakuliahList) {
     let text = `╔════════════════════════════════╗\n║ 📚 DAFTAR MATA KULIAH          ║\n╚════════════════════════════════╝\n\n`
     matakuliahList.forEach((mk, index) => {
-        text += `${index + 1}. ${mk.text}\n   🆔 ID: ${mk.value}\n\n`
+        text += `${index + 1}. ${mk.text}\n\n`
     })
-    text += `Untuk isi logbook:\n/logbook fill [ID] [jam_mulai] [jam_selesai] "kegiatan"\n\nContoh:\n/logbook fill ${matakuliahList[0]?.value || "ID"} 07:00 16:00 "Belajar chapter 5"`
+    text += `Untuk isi logbook:\n/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"\n\nContoh:\n/logbook fill 1 07:00 16:00 "Belajar chapter 5"`
     return text
 }
