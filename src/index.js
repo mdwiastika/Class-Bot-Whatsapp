@@ -54,10 +54,10 @@ async function startBot() {
 
             if (statusCode === DisconnectReason.loggedOut) {
                 console.log("Session logged out. Need QR scan.")
-                process.exit(1) // restart
+                process.exit(1)
             } else {
                 console.log("Unexpected disconnect. Restarting...")
-                process.exit(1) // 🔥 WAJIB EXIT
+                process.exit(1)
             }
         }
     })

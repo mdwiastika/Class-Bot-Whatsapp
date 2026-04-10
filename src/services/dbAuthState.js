@@ -8,8 +8,6 @@ import {
 const SESSION_ID = "main" // Kamu bisa ganti ini kalau mau multi-session
 
 export async function useDbAuthState() {
-
-    // Fungsi internal untuk menulis ke database
     const writeData = async (data, id) => {
         try {
             const jsonStr = JSON.stringify(data, BufferJSON.replacer);
@@ -23,7 +21,6 @@ export async function useDbAuthState() {
         }
     }
 
-    // Fungsi internal untuk membaca dari database
     const readData = async (id) => {
         try {
             const { rows } = await pool.query(
@@ -39,7 +36,6 @@ export async function useDbAuthState() {
         return null;
     }
 
-    // Load credentials utama
     const creds = await readData('creds') || initAuthCreds();
 
     return {

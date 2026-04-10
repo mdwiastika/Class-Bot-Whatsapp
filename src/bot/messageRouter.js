@@ -47,7 +47,6 @@ export async function routeMessage(context) {
     }
 
     try {
-        // Auto register group
         const existingGroup = await findGroup(context.groupId)
 
         if (!existingGroup) {

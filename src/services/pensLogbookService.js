@@ -82,7 +82,6 @@ async function loginCAS(jar, email, password) {
     try {
         const casClient = createClient(jar, CAS_HOST)
 
-        // Get LT token
         const loginPage = await casClient.get(
             `${CAS_URL}?service=${encodeURIComponent(SERVICE_URL)}`
         )
@@ -90,7 +89,6 @@ async function loginCAS(jar, email, password) {
         const lt = $('input[name="lt"]').val()
         if (!lt) throw new Error("LT token tidak ditemukan")
 
-        // Submit login
         let res
         try {
             res = await casClient.post(

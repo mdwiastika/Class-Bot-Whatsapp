@@ -73,7 +73,6 @@ Coba lagi atau hubungi admin.
         }
     }
 
-    // ==================== MATKUL / INFO-MATKUL ====================
     if (action === "matkul" || action === "info-matkul" || action === "info-matkul-id") {
         try {
             const creds = await getUserCredentials(sender)
@@ -99,7 +98,6 @@ Setup sekarang, lalu coba lagi!
 Tunggu sebentar... 🕐
 `)
 
-            // Get mata kuliah list
             const result = await getAvailableMatakuliah(creds.email, creds.password)
 
             if (!result.success) {
@@ -136,7 +134,6 @@ Coba lagi atau hubungi admin.
         }
     }
 
-    // ==================== FILL ====================
     if (action === "fill") {
         try {
             const creds = await getUserCredentials(sender)
@@ -152,14 +149,12 @@ Setup sekarang, lalu coba lagi!
 `)
             }
 
-            // Parse arguments
             const matakuliahNumber = args[1]
             const jamMulai = args[2]
             const jamSelesai = args[3]
             const kegiatan = args.slice(4).join(" ").replace(/"/g, '')
             const sesuaiKuliah = "1"
 
-            // Validate arguments
             if (!matakuliahNumber || !jamMulai || !jamSelesai || !kegiatan) {
                 return reply(`
 ❌ *Format Salah!*
@@ -179,7 +174,6 @@ Help:
 `)
             }
 
-            // Validate time format
             if (!/^\d{2}:\d{2}$/.test(jamMulai) || !/^\d{2}:\d{2}$/.test(jamSelesai)) {
                 return reply(`
 ❌ *Format Jam Salah!*
@@ -205,7 +199,6 @@ Coba lagi!
 Tunggu sebentar... 🕐
 `)
 
-            // Get matakuliah list to convert number to ID
             const result = await getAvailableMatakuliah(creds.email, creds.password)
             if (!result.success) {
                 return reply(`
@@ -235,7 +228,6 @@ ${formatMatakuliahList(result.data.matakuliah)}
 
             const selectedMatkul = result.data.matakuliah[matakuliahIndex]
 
-            // Submit logbook
             const submitResult = await loginAndSubmitLogbook(creds.email, creds.password, {
                 matakuliah: selectedMatkul.value,
                 jam_mulai: jamMulai,
@@ -293,7 +285,6 @@ Coba lagi atau hubungi admin.
         }
     }
 
-    // ==================== INFO ====================
     if (action === "info") {
         try {
             const creds = await getUserCredentials(sender)
@@ -337,7 +328,6 @@ Coba lagi atau hubungi admin.
         }
     }
 
-    // ==================== DELETE ====================
     if (action === "delete") {
         try {
             const creds = await getUserCredentials(sender)
