@@ -2,15 +2,7 @@ import axios from "axios"
 import { wrapper } from "axios-cookiejar-support"
 import { CookieJar } from "tough-cookie"
 import * as cheerio from "cheerio"
-
-const WORKER_URL = "https://steep-wind-5100.marceldwias.workers.dev"
-const CAS_HOST = "login.pens.ac.id"
-const MIS_HOST = "online.mis.pens.ac.id"
-
-const SERVICE_URL = "https://online.mis.pens.ac.id/index.php?Login=1&halAwal=1"
-const CAS_URL = `${WORKER_URL}/cas/login`
-const LOGBOOK_PAGE = `${WORKER_URL}/entry_logbook_kp1.php`
-const MENTRY_PAGE = `${WORKER_URL}/mEntry_Logbook_KP1.php`
+import { PENS_CONFIG } from "../config/pens.js"
 
 function createClient(jar, targetHost) {
     return wrapper(axios.create({
@@ -28,7 +20,7 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
         const jar = new CookieJar()
         await loginCAS(jar, email, password)
 
-        const misClient = createClient(jar, MIS_HOST)
+        const misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
         const data = await getLogbookData(misClient)
 
         const matakuliahId = logbookData.matakuliah
@@ -54,7 +46,7 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
         }
 
         await misClient.post(
-            LOGBOOK_PAGE,
+            PENS_CONFIG.LOGBOOK_PAGE_URL,
             new URLSearchParams(submitPayload),
             { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
         )
@@ -80,19 +72,21 @@ export async function loginAndSubmitLogbook(email, password, logbookData) {
 
 async function loginCAS(jar, email, password) {
     try {
-        const casClient = createClient(jar, CAS_HOST)
+        const casClient = createClient(jar, PENS_CONFIG.CAS_HOST)
 
+        // Get LT token
         const loginPage = await casClient.get(
-            `${CAS_URL}?service=${encodeURIComponent(SERVICE_URL)}`
+            `${PENS_CONFIG.CAS_LOGIN_URL}?service=${encodeURIComponent(PENS_CONFIG.SERVICE_URL)}`
         )
         const $ = cheerio.load(loginPage.data)
         const lt = $('input[name="lt"]').val()
         if (!lt) throw new Error("LT token tidak ditemukan")
 
+        // Submit login
         let res
         try {
             res = await casClient.post(
-                `${CAS_URL}?service=${encodeURIComponent(SERVICE_URL)}`,
+                `${PENS_CONFIG.CAS_LOGIN_URL}?service=${encodeURIComponent(PENS_CONFIG.SERVICE_URL)}`,
                 new URLSearchParams({
                     username: email,
                     password,
@@ -129,7 +123,7 @@ async function followRedirects(jar, url) {
         try {
             const parsed = new URL(currentUrl)
             const targetHost = parsed.host
-            const workerUrl = `${WORKER_URL}${parsed.pathname}${parsed.search}`
+            const workerUrl = `${PENS_CONFIG.WORKER_URL}${parsed.pathname}${parsed.search}`
             const client = createClient(jar, targetHost)
             await client.get(workerUrl)
             return
@@ -149,7 +143,7 @@ async function getLogbookData(misClient) {
     try {
         const params = await getInitialParams(misClient)
 
-        const res = await misClient.get(LOGBOOK_PAGE, {
+        const res = await misClient.get(PENS_CONFIG.LOGBOOK_PAGE_URL, {
             params: { ...params, sid: Math.random() }
         })
 
@@ -179,7 +173,7 @@ async function getLogbookData(misClient) {
 
 async function getInitialParams(misClient) {
     try {
-        const res = await misClient.get(MENTRY_PAGE)
+        const res = await misClient.get(PENS_CONFIG.MENTRY_PAGE_URL)
         const match = res.data.match(/showEntry_Logbook_KP1\((\d+),\s*(\d+),\s*(\d+)\)/)
         if (!match) throw new Error("Gagal extract parameter awal")
 
@@ -198,7 +192,7 @@ export async function getAvailableMatakuliah(email, password) {
         const jar = new CookieJar()
         await loginCAS(jar, email, password)
 
-        const misClient = createClient(jar, MIS_HOST)
+        const misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
         const data = await getLogbookData(misClient)
 
         return {
