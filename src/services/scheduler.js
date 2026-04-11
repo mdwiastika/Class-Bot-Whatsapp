@@ -1,105 +1,108 @@
-// services/scheduler.js
 import cron from "node-cron"
-import {
-    getActiveSchedules,
-    markSent,
-    deactivate
-} from "./scheduleService.js"
+import { getActiveSchedules, markSent, deactivate } from "./scheduleService.js"
 import { enqueueMessage } from "./messageQueue.js"
 
-export function startGlobalScheduler(sock) {
+const EVERY_MINUTE = "* * * * *"
 
-    cron.schedule("* * * * *", async () => {
-        try {
-            const schedules = await getActiveSchedules()
+const WEEKDAYS = {
+    SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
+    THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+}
 
-            const now = new Date()
-            const today = now.getDay()
-            const hour = now.getHours()
-            const minute = now.getMinutes()
+const RECURRENCE = {
+    DAILY: "daily",
+    WEEKLY: "weekly",
+    WORKING_DAYS: "working_days",
+}
 
-            for (const schedule of schedules) {
+function isTimeMatched(scheduledTime, currentHour, currentMinute) {
+    return scheduledTime.getHours() === currentHour &&
+           scheduledTime.getMinutes() === currentMinute
+}
 
-                const scheduleDate = new Date(schedule.schedule_time)
+function isAlreadySentThisMinute(schedule, now) {
+    if (!schedule.last_sent_at) return false
+    
+    const lastSent = new Date(schedule.last_sent_at)
+    return lastSent.getDate() === now.getDate() &&
+           lastSent.getHours() === now.getHours() &&
+           lastSent.getMinutes() === now.getMinutes()
+}
 
-                if (scheduleDate.getHours() !== hour || scheduleDate.getMinutes() !== minute) {
-                    continue
-                }
+function isWorkingDay(dayOfWeek) {
+    return dayOfWeek >= WEEKDAYS.MONDAY && dayOfWeek <= WEEKDAYS.FRIDAY
+}
 
-                if (schedule.last_sent_at) {
-                    const last = new Date(schedule.last_sent_at)
-                    if (
-                        last.getDate() === now.getDate() &&
-                        last.getHours() === hour &&
-                        last.getMinutes() === minute
-                    ) {
-                        continue
-                    }
-                }
+function matchesRecurrenceRule(schedule, now) {
+    const dayOfWeek = now.getDay()
+    const scheduledTime = new Date(schedule.schedule_time)
+    
+    if (!schedule.is_recurring) {
+        return scheduledTime <= now
+    }
+    
+    switch (schedule.recurring_type) {
+        case RECURRENCE.DAILY:
+            return true
+        case RECURRENCE.WEEKLY:
+            return schedule.recurring_day === dayOfWeek
+        case RECURRENCE.WORKING_DAYS:
+            return isWorkingDay(dayOfWeek)
+        default:
+            return false
+    }
+}
 
-                let shouldSend = false
+export function shouldTriggerNow(schedule, now) {
+    const hour = now.getHours()
+    const minute = now.getMinutes()
+    
+    const scheduledTime = new Date(schedule.schedule_time)
+    if (!isTimeMatched(scheduledTime, hour, minute)) return false
+    
+    if (isAlreadySentThisMinute(schedule, now)) return false
+    
+    return matchesRecurrenceRule(schedule, now)
+}
 
-                if (!schedule.is_recurring) {
-                    if (scheduleDate <= now) shouldSend = true
-                }
+function getRecurrenceLabel(type) {
+    const labels = {
+        [RECURRENCE.DAILY]: "☀️  Setiap Hari",
+        [RECURRENCE.WEEKLY]: "📍 Mingguan",
+        [RECURRENCE.WORKING_DAYS]: "💼 Hari Kerja (Sen-Jum)"
+    }
+    return labels[type] || "⏱️  One-Time"
+}
 
-                if (schedule.recurring_type === "daily") {
-                    shouldSend = true
-                }
-
-                if (
-                    schedule.recurring_type === "weekly" &&
-                    schedule.recurring_day === today
-                ) {
-                    shouldSend = true
-                }
-
-                if (
-                    schedule.recurring_type === "working_days" &&
-                    today >= 1 && today <= 5
-                ) {
-                    shouldSend = true
-                }
-
-                if (!shouldSend) continue
-
-                const formatTime = now.toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                })
-
-                let typeLabel = "One-time"
-
-                if (schedule.recurring_type === "daily")
-                    typeLabel = "Daily"
-
-                if (schedule.recurring_type === "weekly")
-                    typeLabel = "Weekly"
-
-                if (schedule.recurring_type === "working_days")
-                    typeLabel = "Working Days (Mon-Fri)"
-
-                const formattedMessage = `
+function formatScheduleMessage(schedule, now) {
+    const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    const typeLabel = getRecurrenceLabel(schedule.recurring_type)
+    
+    return `
 📅 *Schedule Notification*
 ────────────────
-🕒 ${formatTime} WIB
+🕒 ${time} WIB
 🔁 ${typeLabel}
 💬 ${schedule.message}
-`
+`.trim()
+}
 
-                await enqueueMessage(sock, schedule.group_id, {
-                    text: formattedMessage.trim()
-                })
-
-                if (!schedule.is_recurring) {
-                    await deactivate(schedule.id)
-                } else {
-                    await markSent(schedule.id)
-                }
+export function startGlobalScheduler(sock) {
+    cron.schedule(EVERY_MINUTE, async () => {
+        try {
+            const schedules = await getActiveSchedules()
+            const now = new Date()
+            
+            for (const schedule of schedules) {
+                if (!shouldTriggerNow(schedule, now)) continue
+                
+                const message = formatScheduleMessage(schedule, now)
+                await enqueueMessage(sock, schedule.group_id, { text: message })
+                
+                schedule.is_recurring ? await markSent(schedule.id) : await deactivate(schedule.id)
             }
-
         } catch (err) {
-            console.error("Scheduler Error:", err)
+            console.error("❌ Scheduler Error:", err.message)
         }
     })
 }

@@ -4,17 +4,9 @@
  */
 
 export const PENS_CONFIG = {
-    // Cloudflare Worker URL (acts as proxy to PENS)
-    // Can be changed via environment for different deployments
     WORKER_URL: process.env.PENS_WORKER_URL || 'https://steep-wind-5100.marceldwias.workers.dev',
-
-    // PENS CAS Login Host
     CAS_HOST: process.env.PENS_CAS_HOST || 'login.pens.ac.id',
-
-    // PENS MIS Host
     MIS_HOST: process.env.PENS_MIS_HOST || 'online.mis.pens.ac.id',
-
-    // Derived URLs (constructed from above)
     get SERVICE_URL() {
         return `https://${this.MIS_HOST}/index.php?Login=1&halAwal=1`
     },
@@ -32,9 +24,6 @@ export const PENS_CONFIG = {
     },
 }
 
-/**
- * Validate PENS configuration
- */
 export function validatePensConfig() {
     const required = ['WORKER_URL', 'CAS_HOST', 'MIS_HOST']
     const missing = required.filter(key => !PENS_CONFIG[key])

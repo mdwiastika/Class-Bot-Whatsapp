@@ -1,8 +1,6 @@
-import { MESSAGE_DELAYS } from '../config/delays.js'
+import { MESSAGE_DELAYS } from "../config/delays.js"
+import { sleep, randomDelay } from "../utils/helpers.js"
 
-/**
- * Queue item with retry capability
- */
 class QueueItem {
     constructor(jid, message) {
         this.jid = jid
@@ -16,102 +14,93 @@ class QueueItem {
     }
 
     getRetryDelay() {
-        if (this.retries >= MESSAGE_DELAYS.RETRY_BACKOFF.length) {
-            return MESSAGE_DELAYS.RETRY_BACKOFF[MESSAGE_DELAYS.RETRY_BACKOFF.length - 1]
-        }
-        return MESSAGE_DELAYS.RETRY_BACKOFF[this.retries]
+        const index = Math.min(this.retries, MESSAGE_DELAYS.RETRY_BACKOFF.length - 1)
+        return MESSAGE_DELAYS.RETRY_BACKOFF[index]
     }
 }
 
-let queue = []
-let isProcessing = false
+class MessageQueueManager {
+    constructor() {
+        this.items = []
+        this.isProcessing = false
+    }
 
-/**
- * Get random delay within range (in milliseconds)
- */
-function randomDelay(min, max) {
-    return new Promise(resolve => {
-        const ms = Math.floor(Math.random() * (max - min)) + min
-        setTimeout(resolve, ms)
-    })
+    enqueue(item) {
+        this.items.push(item)
+    }
+
+    peekNext() {
+        return this.items[0] || null
+    }
+
+    dequeueNext() {
+        return this.items.shift()
+    }
+
+    isProcessing() {
+        return this.isProcessing
+    }
+
+    setProcessing(value) {
+        this.isProcessing = value
+    }
+
+    size() {
+        return this.items.length
+    }
+
+    clear() {
+        this.items = []
+        this.isProcessing = false
+    }
 }
 
-/**
- * Wait for specified milliseconds
- */
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms))
-}
+const queueManager = new MessageQueueManager()
 
-/**
- * Process message queue with retry logic
- * Messages are only removed from queue after successful send
- */
-async function processQueue(sock) {
-    if (isProcessing) return
-    isProcessing = true
+async function processQueue(sock, manager) {
+    if (manager.isProcessing()) return
+    manager.setProcessing(true)
 
-    while (queue.length > 0) {
-        const item = queue[0]  // Don't remove yet
+    try {
+        while (manager.size() > 0) {
+            const item = manager.peekNext()
+            if (!item) break
 
-        try {
-            await sock.sendPresenceUpdate("composing", item.jid)
-            await randomDelay(
-                MESSAGE_DELAYS.TYPING_INDICATOR_MIN,
-                MESSAGE_DELAYS.TYPING_INDICATOR_MAX
-            )
-            await sock.sendMessage(item.jid, item.message)
-            await sock.sendPresenceUpdate("paused", item.jid)
+            try {
+                await sock.sendPresenceUpdate("composing", item.jid)
+                await randomDelay(MESSAGE_DELAYS.TYPING_INDICATOR_MIN, MESSAGE_DELAYS.TYPING_INDICATOR_MAX)
+                await sock.sendMessage(item.jid, item.message)
+                await sock.sendPresenceUpdate("paused", item.jid)
 
-            // ✅ Message sent successfully - remove from queue
-            queue.shift()
-            console.log(`✅ Message sent to ${item.jid}`)
+                manager.dequeueNext()
+                console.log(`✅ Message sent to ${item.jid}`)
 
-            // Wait before next message
-            await randomDelay(
-                MESSAGE_DELAYS.MESSAGE_INTERVAL_MIN,
-                MESSAGE_DELAYS.MESSAGE_INTERVAL_MAX
-            )
-        } catch (err) {
-            if (item.canRetry()) {
-                item.retries++
-                const delay = item.getRetryDelay()
-                console.warn(
-                    `⚠️  Message failed to ${item.jid}, retry ${item.retries}/${MESSAGE_DELAYS.MAX_RETRIES} in ${delay}ms`
-                )
-                await sleep(delay)
-                // Don't remove from queue, will retry on next iteration
-            } else {
-                // ❌ Max retries exceeded
-                console.error(
-                    `❌ Message failed permanently after ${MESSAGE_DELAYS.MAX_RETRIES} retries:`,
-                    {
+                await randomDelay(MESSAGE_DELAYS.MESSAGE_INTERVAL_MIN, MESSAGE_DELAYS.MESSAGE_INTERVAL_MAX)
+            } catch (err) {
+                if (item.canRetry()) {
+                    item.retries++
+                    const delay = item.getRetryDelay()
+                    console.warn(`⚠️ Retry ${item.retries}/${MESSAGE_DELAYS.MAX_RETRIES} in ${delay}ms`)
+                    await sleep(delay)
+                } else {
+                    manager.dequeueNext()
+                    console.error(`❌ Message failed permanently:`, {
                         jid: item.jid,
-                        message: typeof item.message === 'string' 
-                            ? item.message.substring(0, 100) 
-                            : JSON.stringify(item.message).substring(0, 100),
                         error: err.message,
                         createdAt: new Date(item.createdAt).toISOString()
-                    }
-                )
-                queue.shift()  // Give up and remove from queue
-                // TODO: Optionally store failed messages in database for debugging
+                    })
+                }
             }
         }
+    } finally {
+        manager.setProcessing(false)
     }
-
-    isProcessing = false
 }
 
-/**
- * Enqueue a message for sending
- * Messages will be sent with delays to avoid WhatsApp rate limiting
- * @param {Object} sock - Socket.io-like connection
- * @param {string} jid - WhatsApp JID (recipient)
- * @param {Object} message - Message object
- */
 export async function enqueueMessage(sock, jid, message) {
     const item = new QueueItem(jid, message)
-    queue.push(item)
-    processQueue(sock)
+    queueManager.enqueue(item)
+    return processQueue(sock, queueManager)
 }
+
+export { QueueItem, MessageQueueManager, queueManager }

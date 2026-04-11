@@ -3,9 +3,6 @@ import { getAvailableMatakuliah, loginAndSubmitLogbook, formatMatakuliahList } f
 import { validateUserCredentials } from "../utils/credentialValidator.js"
 import { isValidTimeRange } from "../utils/validation.js"
 
-// ============================================================================
-// HANDLER: Setup credentials
-// ============================================================================
 async function handleLogbookSetup(context) {
     const { args, sender, groupId, reply } = context
     const [, email, password] = args
@@ -23,9 +20,6 @@ async function handleLogbookSetup(context) {
     }
 }
 
-// ============================================================================
-// HANDLER: List available mata kuliah
-// ============================================================================
 async function handleLogbookMatkul(context) {
     const { sender, reply } = context
 
@@ -49,9 +43,6 @@ async function handleLogbookMatkul(context) {
     }
 }
 
-// ============================================================================
-// HANDLER: Fill logbook entry
-// ============================================================================
 async function handleLogbookFill(context) {
     const { args, sender, reply } = context
 
@@ -106,9 +97,6 @@ async function handleLogbookFill(context) {
     }
 }
 
-// ============================================================================
-// HANDLER: Show stored credentials info
-// ============================================================================
 async function handleLogbookInfo(context) {
     const { sender, reply } = context
 
@@ -127,9 +115,6 @@ async function handleLogbookInfo(context) {
     }
 }
 
-// ============================================================================
-// HANDLER: Delete stored credentials
-// ============================================================================
 async function handleLogbookDelete(context) {
     const { sender, reply } = context
 
@@ -148,35 +133,21 @@ async function handleLogbookDelete(context) {
     }
 }
 
-// ============================================================================
-// ACTION DISPATCHER
-// ============================================================================
-const actionHandlers = {
-    setup: handleLogbookSetup,
-    matkul: handleLogbookMatkul,
-    'info-matkul': handleLogbookMatkul,
-    'info-matkul-id': handleLogbookMatkul,
-    fill: handleLogbookFill,
-    info: handleLogbookInfo,
-    delete: handleLogbookDelete,
-}
-
-// ============================================================================
-// MAIN HANDLER
-// ============================================================================
 export async function handleLogbook(context) {
-    const { args, reply } = context
+    const { args } = context
 
     if (!args.length) {
-        return reply(`📖 *LOGBOOK COMMANDS*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill NOMOR jam_mulai jam_selesai kegiatan\n/logbook info\n/logbook delete`)
+        return context.reply(`📚 *LOGBOOK COMMANDS*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill # jam jam activity\n/logbook info\n/logbook delete`)
     }
 
     const action = args[0].toLowerCase()
-    const handler = actionHandlers[action]
 
-    if (!handler) {
-        return reply(`❌ *Action Tidak Dikenal!*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill NOMOR jam_mulai jam_selesai kegiatan\n/logbook info\n/logbook delete`)
+    switch (action) {
+        case "setup": return handleLogbookSetup(context)
+        case "matkul": return handleLogbookMatkul(context)
+        case "fill": return handleLogbookFill(context)
+        case "info": return handleLogbookInfo(context)
+        case "delete": return handleLogbookDelete(context)
+        default: return context.reply(`❌ *Perintah tidak dikenal!*\n\n/logbook setup\n/logbook matkul\n/logbook fill\n/logbook info\n/logbook delete`)
     }
-
-    return handler(context)
 }
