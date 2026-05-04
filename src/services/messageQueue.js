@@ -22,7 +22,7 @@ class QueueItem {
 class MessageQueueManager {
     constructor() {
         this.items = []
-        this.isProcessing = false
+        this._isProcessing = false
     }
 
     enqueue(item) {
@@ -38,11 +38,11 @@ class MessageQueueManager {
     }
 
     isProcessing() {
-        return this.isProcessing
+        return this._isProcessing
     }
 
     setProcessing(value) {
-        this.isProcessing = value
+        this._isProcessing = value
     }
 
     size() {
@@ -51,7 +51,7 @@ class MessageQueueManager {
 
     clear() {
         this.items = []
-        this.isProcessing = false
+        this._isProcessing = false
     }
 }
 
