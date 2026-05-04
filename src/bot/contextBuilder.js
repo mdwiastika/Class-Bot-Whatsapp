@@ -32,6 +32,8 @@ export function buildContext(sock, msgWrapper) {
 
     const args = parts.slice(1)
 
+    const selectedRowId = msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId || null
+
     return {
         sock,
         text,
@@ -42,6 +44,7 @@ export function buildContext(sock, msgWrapper) {
         isGroup,
         command,
         args,
+        selectedRowId,
         reply: (message) =>
             sock.sendMessage(groupId, { text: message })
     }

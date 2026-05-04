@@ -1,4 +1,6 @@
 import { createSchedule, listSchedules, deleteSchedule } from "../services/scheduleService.js"
+import { buildScheduleMenu } from "../utils/listMessageBuilder.js"
+import { enqueueMessage } from "../services/messageQueue.js"
 
 const DAYS = {
     sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
@@ -6,10 +8,10 @@ const DAYS = {
 }
 
 export async function handleSchedule(context) {
-    const { args, groupId, reply } = context
+    const { args, groupId, reply, sock } = context
 
     if (!args.length) {
-        return reply(`📅 *Schedule Commands*\n\n/schedule 2026-02-25 08:00 Pesan\n/schedule daily 08:00 Pesan\n/schedule weekly monday 08:00 Pesan\n/schedule working 08:00 Pesan`)
+        return await enqueueMessage(sock, groupId, buildScheduleMenu())
     }
 
     if (args[0] === "list") {
