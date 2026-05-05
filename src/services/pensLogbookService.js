@@ -216,7 +216,7 @@ export async function getAvailableMatakuliah(email, password) {
 export function formatMatakuliahList(matakuliahList) {
     let text = "📚 *Daftar Mata Kuliah*\n──────────\n\n"
     matakuliahList.forEach((mk, index) => {
-        text += `${index + 1}. ${mk.text}\n\n`
+        text += `${index + 1}. ${mk.text}\n`
     })
     text += `Isi logbook:\n/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"\n\nContoh:\n/logbook fill 1 07:00 16:00 "Belajar chapter 5"`
     return text
