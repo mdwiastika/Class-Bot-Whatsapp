@@ -73,7 +73,6 @@ async function processQueue(sock, manager) {
                 await sock.sendPresenceUpdate("paused", item.jid)
 
                 manager.dequeueNext()
-                console.log(`✅ Message sent to ${item.jid}`)
 
                 await randomDelay(MESSAGE_DELAYS.MESSAGE_INTERVAL_MIN, MESSAGE_DELAYS.MESSAGE_INTERVAL_MAX)
             } catch (err) {
