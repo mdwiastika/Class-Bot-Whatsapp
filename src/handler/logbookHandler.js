@@ -8,12 +8,21 @@ async function handleLogbookSetup(context) {
     const [, email, password] = args
 
     if (!email || !password) {
-        return reply(`❌ *Format Salah!*\n\nFormat: /logbook setup email@pens.ac.id password\n\n🔐 Password akan disimpan terenkripsi di database!`)
+        return reply(`❌ Format salah.\n\nGunakan:\n/logbook setup email@pens.ac.id password`)
     }
 
     try {
         await saveUserCredentials(sender, groupId, email, password)
-        return reply(`✅ *Credentials Berhasil Disimpan!*\n\n📧 Email: ${email}\n🔐 Password: ****(aman)\n\nSekarang kamu bisa:\n1️⃣ /logbook matkul\n2️⃣ /logbook fill [ID] [jam] [jam] "kegiatan"\n\nHapus: /logbook delete`)
+        return reply(`✅ *Credentials berhasil disimpan*
+──────────
+
+📧 Email: ${email}
+🔐 Password: disimpan aman
+
+Lanjutkan dengan:
+- /logbook matkul
+- /logbook fill [ID] [jam_mulai] [jam_selesai] "kegiatan"
+- /logbook delete`)
     } catch (error) {
         console.error("Setup error:", error)
         return reply(`❌ *Error!*\n\nGagal menyimpan credentials.\nCoba lagi atau hubungi admin.`)
@@ -33,13 +42,13 @@ async function handleLogbookMatkul(context) {
         const result = await getAvailableMatakuliah(creds.email, creds.password)
 
         if (!result.success) {
-            return reply(`❌ *Gagal Ambil Mata Kuliah!*\n\n${result.message}\n\nSolusi: /logbook setup email password`)
+            return reply(`❌ Gagal ambil mata kuliah.\n\n${result.message}\n\nCoba setup ulang:\n/logbook setup email password`)
         }
 
         return reply(formatMatakuliahList(result.data.matakuliah))
     } catch (error) {
         console.error("Matkul error:", error)
-        return reply(`❌ *Error!*\n\n${error.message}\n\nGagal mengambil mata kuliah.`)
+        return reply(`❌ Terjadi error saat ambil mata kuliah.\n\n${error.message}`)
     }
 }
 
@@ -54,26 +63,32 @@ async function handleLogbookFill(context) {
         const kegiatan = kegiatanArray.join(" ").replace(/"/g, '')
 
         if (!matakuliahNumber || !jamMulai || !jamSelesai || !kegiatan) {
-            return reply(`❌ *Format Salah!*\n\n/logbook fill NOMOR JAM_MULAI JAM_SELESAI "KEGIATAN"\n\nContoh: /logbook fill 1 07:00 16:00 "Belajar chapter 5"`)
+            return reply(`❌ Format salah.
+
+Gunakan:
+/logbook fill NOMOR JAM_MULAI JAM_SELESAI "KEGIATAN"
+
+Contoh:
+/logbook fill 1 07:00 16:00 "Belajar chapter 5"`)
         }
 
         const timeValidation = isValidTimeRange(jamMulai, jamSelesai)
         if (!timeValidation.valid) {
-            return reply(`❌ *Format Jam Salah!*\n\n${timeValidation.error}\n\nFormat: HH:MM (24-jam)`)
+            return reply(`❌ Format jam salah.\n\n${timeValidation.error}\n\nGunakan format HH:MM (24 jam).`)
         }
 
-        await reply(`🔄 *Isi Logbook...*\n⏳ Login...\n📝 Validasi...\n🚀 Submit...`)
+        await reply("🔄 Memproses logbook...\nLogin, validasi, dan submit sedang berjalan.")
 
         const { creds } = credsResult
         const matkResult = await getAvailableMatakuliah(creds.email, creds.password)
         if (!matkResult.success) {
-            return reply(`❌ *Gagal Ambil Mata Kuliah!*\n\n${matkResult.message}`)
+            return reply(`❌ Gagal ambil mata kuliah.\n\n${matkResult.message}`)
         }
 
         const matakuliahIndex = parseInt(matakuliahNumber) - 1
         const matkList = matkResult.data.matakuliah
         if (isNaN(matakuliahIndex) || matakuliahIndex < 0 || matakuliahIndex >= matkList.length) {
-            return reply(`❌ *Nomor Tidak Valid!*\n\n${formatMatakuliahList(matkList)}`)
+            return reply(`❌ Nomor mata kuliah tidak valid.\n\n${formatMatakuliahList(matkList)}`)
         }
 
         const selectedMatkul = matkList[matakuliahIndex]
@@ -86,14 +101,18 @@ async function handleLogbookFill(context) {
         })
 
         if (submitResult.success) {
-            return reply(`✅ *Logbook Berhasil Diisi!*\n\n📚 ${submitResult.data.matakuliah}\n📅 ${submitResult.data.tanggal}\n⏰ ${submitResult.data.jam_mulai} - ${submitResult.data.jam_selesai}`)
+            return reply(`✅ Logbook berhasil diisi.
+
+📚 ${submitResult.data.matakuliah}
+📅 ${submitResult.data.tanggal}
+⏰ ${submitResult.data.jam_mulai} - ${submitResult.data.jam_selesai}`)
         }
 
-        return reply(`❌ *Gagal Isi Logbook!*\n\n${submitResult.message}`)
+        return reply(`❌ Gagal isi logbook.\n\n${submitResult.message}`)
 
     } catch (error) {
         console.error("Fill error:", error)
-        return reply(`❌ *Error!*\n\n${error.message}\n\nGagal mengisi logbook.`)
+        return reply(`❌ Terjadi error saat isi logbook.\n\n${error.message}`)
     }
 }
 
@@ -103,15 +122,25 @@ async function handleLogbookInfo(context) {
     try {
         const creds = await getUserCredentials(sender)
         if (!creds) {
-            return reply(`📭 *Belum Ada Credentials*\n\nSetup: /logbook setup email@pens.ac.id password`)
+            return reply("📭 Belum ada credentials.\n\nSetup dulu:\n/logbook setup email@pens.ac.id password")
         }
 
         const created = new Date(creds.created_at).toLocaleDateString('id-ID')
-        return reply(`📋 *INFO CREDENTIALS*\n\n📧 Email: ${creds.email}\n🔐 Password: ****(aman)\n📅 Setup: ${created}\n\nPerintah:\n/logbook matkul\n/logbook fill\n/logbook delete`)
+        return reply(`📋 *Info Credentials*
+──────────
+
+📧 Email: ${creds.email}
+🔐 Password: disimpan aman
+📅 Tanggal setup: ${created}
+
+Perintah:
+- /logbook matkul
+- /logbook fill
+- /logbook delete`)
 
     } catch (error) {
         console.error("Info error:", error)
-        return reply(`❌ *Error!*\n\nGagal mengambil info.`)
+        return reply("❌ Gagal mengambil info credentials.")
     }
 }
 
@@ -121,15 +150,15 @@ async function handleLogbookDelete(context) {
     try {
         const creds = await getUserCredentials(sender)
         if (!creds) {
-            return reply(`📭 *Belum Ada Credentials*\n\nTidak ada yang bisa dihapus.`)
+            return reply("📭 Belum ada credentials yang tersimpan.")
         }
 
         await deleteUserCredentials(sender)
-        return reply(`🗑️  *Credentials Dihapus* ✅\n\nSetup lagi: /logbook setup email password`)
+        return reply("✅ Credentials berhasil dihapus.\n\nSetup lagi dengan:\n/logbook setup email password")
 
     } catch (error) {
         console.error("Delete error:", error)
-        return reply(`❌ *Error!*\n\nGagal menghapus credentials.`)
+        return reply("❌ Gagal menghapus credentials.")
     }
 }
 
@@ -137,7 +166,14 @@ export async function handleLogbook(context) {
     const { args } = context
 
     if (!args.length) {
-        return context.reply(`📚 *LOGBOOK COMMANDS*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill # jam jam activity\n/logbook info\n/logbook delete`)
+        return context.reply(`📚 *Perintah Logbook*
+──────────
+
+- /logbook setup email password
+- /logbook matkul
+- /logbook fill # jam_mulai jam_selesai "kegiatan"
+- /logbook info
+- /logbook delete`)
     }
 
     const action = args[0].toLowerCase()
@@ -148,6 +184,13 @@ export async function handleLogbook(context) {
         case "fill": return handleLogbookFill(context)
         case "info": return handleLogbookInfo(context)
         case "delete": return handleLogbookDelete(context)
-        default: return context.reply(`❌ *Perintah tidak dikenal!*\n\n/logbook setup\n/logbook matkul\n/logbook fill\n/logbook info\n/logbook delete`)
+        default: return context.reply(`❌ Perintah logbook tidak dikenal.
+
+Gunakan:
+- /logbook setup
+- /logbook matkul
+- /logbook fill
+- /logbook info
+- /logbook delete`)
     }
 }

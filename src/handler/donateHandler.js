@@ -1,44 +1,17 @@
 export async function handleDonate(context) {
     const { reply } = context
 
-    return reply(`
-╔════════════════════════╗
-║ 💖 SUPPORT BOT INI     ║
-╚════════════════════════╝
+    return reply(`💖 *Support Bot*
+──────────
 
-🙏 *Terima kasih sudah pakai bot ini!*
+Terima kasih sudah pakai bot ini.
+Kalau bot ini membantu, kamu bisa support di:
 
-Jika bot ini membantu & bermanfaat,
-kamu bisa mendukung pengembangannya 💪
+👤 A/N: Marcel Dwi Astika
+🏦 BCA: 0501165076
+🏦 SeaBank: 901770566633
+📱 E-Wallet: 0895339390753
+(OVO, DANA, GoPay, ShopeePay)
 
-────────────────────
-
-👤 *A/N: Marcel Dwi Astika*
-
-*🏦 TRANSFER BANK*
-
-💳 *BCA*
-   0501165076
-
-💳 *SeaBank*
-   901770566633
-
-────────────────────
-
-*📱 E-WALLET*
-0895339390753
-
-Tersedia di:
-🔸 OVO
-🔸 DANA  
-🔸 GoPay
-🔸 ShopeePay
-
-────────────────────
-
-✨ Setiap donasi sangat berarti!
-🔥 Membantu develop fitur baru
-⚙️  Maintenance & support
-🚀 Terima kasih banyak! 🙌
-`)
+Setiap dukungan sangat berarti. Terima kasih 🙌`)
 }

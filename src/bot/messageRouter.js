@@ -44,14 +44,7 @@ export async function routeMessage(context) {
 
     if (!handler) {
         return sock.sendMessage(groupId, {
-            text: `❌ Unknown command.\nType /menu to see available commands.`,
-            buttons: [
-                { buttonId: "1", buttonText: { displayText: "Jaringan Komputer" }, type: 1 },
-                { buttonId: "2", buttonText: { displayText: "Pemrograman Web" }, type: 1 },
-                { buttonId: "3", buttonText: { displayText: "Basis Data" }, type: 1 },
-            ],
-            footer: "KP Logbook Bot",
-            headerType: 1
+            text: "❌ Perintah tidak dikenal.\nKetik /menu untuk melihat daftar fitur."
         })
     }
 

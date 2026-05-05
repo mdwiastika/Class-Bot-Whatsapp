@@ -9,14 +9,22 @@ export async function handleSchedule(context) {
     const { args, groupId, reply } = context
 
     if (!args.length) {
-        return reply(`📅 *Schedule Commands*\n\n/schedule 2026-02-25 08:00 Pesan\n/schedule daily 08:00 Pesan\n/schedule weekly monday 08:00 Pesan\n/schedule working 08:00 Pesan`)
+        return reply(`📅 *Perintah Schedule*
+──────────
+
+- /schedule YYYY-MM-DD HH:MM Pesan
+- /schedule daily HH:MM Pesan
+- /schedule weekly [hari] HH:MM Pesan
+- /schedule working HH:MM Pesan
+- /schedule list
+- /schedule delete ID`)
     }
 
     if (args[0] === "list") {
         const schedules = await listSchedules(groupId)
 
         if (!schedules.length) {
-            return reply(`📭 *Belum Ada Schedule*\n\nBuat: /schedule daily 08:00 Pesan`)
+            return reply("📭 Belum ada schedule.\n\nContoh:\n/schedule daily 08:00 Pesan")
         }
 
         const text = schedules.map(s => {
@@ -24,15 +32,21 @@ export async function handleSchedule(context) {
             return `🆔 ${s.id} | ⏰ ${s.schedule_time} | ${type}\n💬 ${s.message}`
         }).join("\n\n")
 
-        return reply(`📋 *Schedule-mu*\n\n${text}\n\nHapus: /schedule delete ID`)
+        return reply(`📋 *Schedule Kamu*
+──────────
+
+${text}
+
+Hapus schedule:
+/schedule delete ID`)
     }
 
     if (args[0] === "delete") {
         const id = args[1]
-        if (!id) return reply(`❌ *Format Salah!*\n\n/schedule delete ID`)
+        if (!id) return reply("❌ Format salah.\n\nGunakan:\n/schedule delete ID")
 
         await deleteSchedule(id, groupId)
-        return reply(`✅ *Schedule Dihapus!*`)
+        return reply("✅ Schedule dihapus.")
     }
 
     let recurringType = null
@@ -50,7 +64,7 @@ export async function handleSchedule(context) {
         recurringDay = DAYS[day]
 
         if (recurringDay === undefined) {
-            return reply(`❌ *Hari Tidak Valid!*\n\nmonday, tuesday, wednesday, thursday, friday, saturday, sunday`)
+            return reply("❌ Hari tidak valid.\n\nGunakan: sunday, monday, tuesday, wednesday, thursday, friday, saturday")
         }
 
         recurringType = "weekly"
@@ -68,7 +82,7 @@ export async function handleSchedule(context) {
     }
 
     if (!message) {
-        return reply(`❌ *Pesan Kosong!*\n\n/schedule daily 08:00 Selamat pagi!`)
+        return reply("❌ Pesan tidak boleh kosong.\n\nContoh:\n/schedule daily 08:00 Selamat pagi!")
     }
 
     await createSchedule({
@@ -84,5 +98,10 @@ export async function handleSchedule(context) {
         recurringType === "weekly" ? "📍 Mingguan" :
         "💼 Hari Kerja"
 
-    return reply(`✅ *Schedule Dibuat!*\n\n${typeLabel}\n⏰ ${scheduleTime.toTimeString().slice(0, 5)}\n💬 ${message}`)
+    return reply(`✅ *Schedule berhasil dibuat*
+──────────
+
+${typeLabel}
+⏰ ${scheduleTime.toTimeString().slice(0, 5)}
+💬 ${message}`)
 }

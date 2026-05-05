@@ -78,13 +78,11 @@ function formatScheduleMessage(schedule, now) {
     const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     const typeLabel = getRecurrenceLabel(schedule.recurring_type)
     
-    return `
-📅 *Schedule Notification*
-────────────────
+    return `📅 *Schedule Notification*
+──────────
 🕒 ${time} WIB
 🔁 ${typeLabel}
-💬 ${schedule.message}
-`.trim()
+💬 ${schedule.message}`
 }
 
 export function startGlobalScheduler(sock) {
