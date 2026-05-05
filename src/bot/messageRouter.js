@@ -7,7 +7,6 @@ import { handleDonate } from "../handler/donateHandler.js"
 import { handleLogbook } from "../handler/logbookHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
-import { handleButton } from "../handler/testHandler.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId } = context
@@ -37,15 +36,23 @@ export async function routeMessage(context) {
         "/donate": handleDonate,
         "/donation": handleDonate,
         "/donasi": handleDonate,
-        "/button": handleButton,
     }
 
     const handler = routes[command]
+    const buttons = [
+        { buttonId: 'id1', buttonText: { displayText: 'Button 1' }, type: 1 },
+        { buttonId: 'id2', buttonText: { displayText: 'Button 2' }, type: 1 },
+        { buttonId: 'id3', buttonText: { displayText: 'Button 3' }, type: 1 }
+    ]
 
+    const buttonMessage = {
+        text: "Command not found. Please use /menu to see available commands.",
+        footer: 'Hello World',
+        buttons: buttons,
+        headerType: 1
+    }
     if (!handler) {
-        return sock.sendMessage(groupId, {
-            text: "❌ Perintah tidak dikenal.\nKetik /menu untuk melihat daftar fitur."
-        })
+        return sock.sendMessage(groupId, buttonMessage)
     }
 
     try {
