@@ -14,7 +14,12 @@ export async function routeMessage(context) {
 
     if (context.selectedRowId) {
         try {
-            return await handleInteractiveSelection(context)
+            const handled = await handleInteractiveSelection(context)
+            if (handled !== false) return handled
+
+            return sock.sendMessage(groupId, {
+                text: "⚠️ Opsi tidak dikenali. Ketik /menu untuk buka menu lagi."
+            })
         } catch (error) {
             console.error("Interactive selection error:", error)
             return sock.sendMessage(groupId, {

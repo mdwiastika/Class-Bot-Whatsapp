@@ -60,9 +60,8 @@ export async function handleInteractiveSelection(context) {
             })
         }
         if (selectedRowId === 'reminder-create') {
-            return await handleReminder({
-                sock, groupId, args: ['create'], sender,
-                reply: (msg) => enqueueMessage(sock, groupId, msg)
+            return await enqueueMessage(sock, groupId, {
+                text: "Contoh tambah reminder:\n/reminder add 20:30"
             })
         }
         if (selectedRowId === 'reminder-list') {
@@ -72,21 +71,18 @@ export async function handleInteractiveSelection(context) {
             })
         }
         if (selectedRowId === 'reminder-delete') {
-            return await handleReminder({
-                sock, groupId, args: ['delete'], sender,
-                reply: (msg) => enqueueMessage(sock, groupId, msg)
+            return await enqueueMessage(sock, groupId, {
+                text: "Contoh hapus reminder:\n/reminder delete 20:30"
             })
         }
         if (selectedRowId === 'reminder-toggle') {
-            return await handleReminder({
-                sock, groupId, args: ['toggle'], sender,
-                reply: (msg) => enqueueMessage(sock, groupId, msg)
+            return await enqueueMessage(sock, groupId, {
+                text: "Ubah status reminder:\n/reminder on 20:30\n/reminder off 20:30"
             })
         }
         if (selectedRowId === 'schedule-create') {
-            return await handleSchedule({
-                sock, groupId, args: ['create'], sender,
-                reply: (msg) => enqueueMessage(sock, groupId, msg)
+            return await enqueueMessage(sock, groupId, {
+                text: "Contoh buat schedule:\n/schedule daily 08:00 Selamat pagi!"
             })
         }
         if (selectedRowId === 'schedule-list') {
@@ -96,9 +92,8 @@ export async function handleInteractiveSelection(context) {
             })
         }
         if (selectedRowId === 'schedule-delete') {
-            return await handleSchedule({
-                sock, groupId, args: ['delete'], sender,
-                reply: (msg) => enqueueMessage(sock, groupId, msg)
+            return await enqueueMessage(sock, groupId, {
+                text: "Contoh hapus schedule:\n/schedule delete ID"
             })
         }
         if (selectedRowId === 'donate-saweria') {

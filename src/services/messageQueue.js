@@ -1,4 +1,5 @@
 import { MESSAGE_DELAYS } from "../config/delays.js"
+import { generateWAMessageFromContent, proto } from "@whiskeysockets/baileys"
 import { sleep, randomDelay } from "../utils/helpers.js"
 
 class QueueItem {
@@ -69,7 +70,11 @@ async function processQueue(sock, manager) {
             try {
                 await sock.sendPresenceUpdate("composing", item.jid)
                 await randomDelay(MESSAGE_DELAYS.TYPING_INDICATOR_MIN, MESSAGE_DELAYS.TYPING_INDICATOR_MAX)
-                await sock.sendMessage(item.jid, item.message)
+                if (item.message?.listMessage) {
+                    await sendListMessage(sock, item.jid, item.message.listMessage)
+                } else {
+                    await sock.sendMessage(item.jid, item.message)
+                }
                 await sock.sendPresenceUpdate("paused", item.jid)
 
                 manager.dequeueNext()
@@ -95,6 +100,16 @@ async function processQueue(sock, manager) {
     } finally {
         manager.setProcessing(false)
     }
+}
+
+async function sendListMessage(sock, jid, listMessage) {
+    const message = generateWAMessageFromContent(
+        jid,
+        proto.Message.fromObject({ listMessage }),
+        { userJid: sock.user?.id || jid }
+    )
+
+    return sock.relayMessage(jid, message.message, { messageId: message.key.id })
 }
 
 export async function enqueueMessage(sock, jid, message) {

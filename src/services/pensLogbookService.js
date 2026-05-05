@@ -214,7 +214,7 @@ export async function getAvailableMatakuliah(email, password) {
 }
 
 export function formatMatakuliahList(matakuliahList) {
-    let text = `╔════════════════════════════════╗\n║ 📚 DAFTAR MATA KULIAH          ║\n╚════════════════════════════════╝\n\n`
+    let text = "📚 Daftar Mata Kuliah\n\n"
     matakuliahList.forEach((mk, index) => {
         text += `${index + 1}. ${mk.text}\n\n`
     })

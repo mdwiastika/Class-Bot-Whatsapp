@@ -1,34 +1,18 @@
-/**
- * Build a WhatsApp list message with interactive sections and rows
- * @param {string} header - Main message text (required)
- * @param {Array} sections - Array of section objects with title and rows
- * @param {string} footer - Footer text (optional)
- * @param {string} buttonText - Text on the "View options" button (default: "Choose an option")
- * @returns {Object} Formatted list message object for Baileys
- * @example
- * const sections = [
- *   {
- *     title: "Actions",
- *     rows: [
- *       { rowId: "action-1", title: "Option 1", description: "Desc 1" },
- *       { rowId: "action-2", title: "Option 2", description: "Desc 2" }
- *     ]
- *   }
- * ];
- * const msg = buildListMessage("Choose action:", sections, "Footer", "Select");
- */
-export function buildListMessage(header, sections, footer = "", buttonText = "📋 Choose an option") {
-    if (!header || !sections || !Array.isArray(sections)) {
-        throw new Error("buildListMessage requires header (string) and sections (array)");
+export function buildListMessage(description, sections, footer = "", buttonText = "Pilih menu") {
+    if (!description || !Array.isArray(sections) || sections.length === 0) {
+        throw new Error("buildListMessage requires description and non-empty sections")
     }
 
     return {
-        text: header,
-        footer: footer || undefined,
-        title: "Menu",
-        buttonText: buttonText,
-        sections: sections
-    };
+        listMessage: {
+            title: "Class Manager Bot",
+            description,
+            buttonText,
+            listType: 1,
+            sections,
+            footerText: footer || undefined
+        }
+    }
 }
 
 /**
@@ -43,13 +27,13 @@ export function buildListMessage(header, sections, footer = "", buttonText = "�
  */
 export function buildSection(title, rows) {
     if (!title || !Array.isArray(rows)) {
-        throw new Error("buildSection requires title (string) and rows (array)");
+        throw new Error("buildSection requires title (string) and rows (array)")
     }
 
     return {
-        title: title,
-        rows: rows
-    };
+        title,
+        rows
+    }
 }
 
 /**
@@ -63,14 +47,14 @@ export function buildSection(title, rows) {
  */
 export function buildRow(rowId, title, description = "") {
     if (!rowId || !title) {
-        throw new Error("buildRow requires rowId (string) and title (string)");
+        throw new Error("buildRow requires rowId (string) and title (string)")
     }
 
     return {
-        rowId: rowId,
-        title: title,
+        rowId,
+        title,
         description: description || undefined
-    };
+    }
 }
 
 /**
@@ -79,7 +63,7 @@ export function buildRow(rowId, title, description = "") {
  */
 export function buildMainMenu() {
     return buildListMessage(
-        "╔═══════════════════════╗\n║  🎓 CLASS MANAGER BOT ║\n╚═══════════════════════╝\n\n✨ *Pilih Fitur yang Kamu Butuhkan:*",
+        "Pilih fitur yang ingin dipakai:",
         [
             buildSection("📚 Features", [
                 buildRow("menu-logbook", "📖 Logbook", "Isi logbook via WhatsApp"),
@@ -89,9 +73,9 @@ export function buildMainMenu() {
                 buildRow("menu-donate", "💖 Donate", "Dukung pengembang")
             ])
         ],
-        "💬 Tap on an option above",
-        "👇 View Features"
-    );
+        "Tap salah satu fitur",
+        "Lihat fitur"
+    )
 }
 
 /**
@@ -100,7 +84,7 @@ export function buildMainMenu() {
  */
 export function buildLogbookMenu() {
     return buildListMessage(
-        "📖 *LOGBOOK MENU*\n\nPilih aksi yang ingin kamu lakukan:",
+        "📖 Logbook\nPilih aksi yang ingin kamu lakukan:",
         [
             buildSection("Logbook Actions", [
                 buildRow("logbook-fill", "✍️ Isi Logbook", "Mulai isi logbook baru"),
@@ -108,9 +92,9 @@ export function buildLogbookMenu() {
                 buildRow("logbook-matkul", "📚 Daftar Mata Kuliah", "Lihat mata kuliah yang tersedia")
             ])
         ],
-        "Tap an option to continue",
-        "📖 Choose Action"
-    );
+        "Tap salah satu aksi",
+        "Pilih aksi"
+    )
 }
 
 /**
@@ -119,18 +103,18 @@ export function buildLogbookMenu() {
  */
 export function buildReminderMenu() {
     return buildListMessage(
-        "🔔 *REMINDER MENU*\n\nPilih aksi yang ingin kamu lakukan:",
+        "🔔 Reminder\nPilih aksi yang ingin kamu lakukan:",
         [
             buildSection("Reminder Actions", [
-                buildRow("reminder-create", "➕ Buat Reminder", "Atur pengingat logbook baru"),
+                buildRow("reminder-create", "➕ Tambah Reminder", "Buat reminder baru"),
                 buildRow("reminder-list", "📋 Lihat Reminders", "Tampilkan semua reminder aktif"),
                 buildRow("reminder-delete", "🗑️ Hapus Reminder", "Hapus reminder yang ada"),
-                buildRow("reminder-toggle", "🔄 Aktifkan/Nonaktifkan", "Ubah status reminder")
+                buildRow("reminder-toggle", "🔄 Ubah Status", "Aktifkan atau nonaktifkan reminder")
             ])
         ],
-        "Tap an option to continue",
-        "🔔 Choose Action"
-    );
+        "Tap salah satu aksi",
+        "Pilih aksi"
+    )
 }
 
 /**
@@ -139,7 +123,7 @@ export function buildReminderMenu() {
  */
 export function buildScheduleMenu() {
     return buildListMessage(
-        "📅 *SCHEDULE MENU*\n\nPilih aksi yang ingin kamu lakukan:",
+        "📅 Schedule\nPilih aksi yang ingin kamu lakukan:",
         [
             buildSection("Schedule Actions", [
                 buildRow("schedule-create", "➕ Buat Jadwal", "Buat jadwal pengiriman pesan baru"),
@@ -147,9 +131,9 @@ export function buildScheduleMenu() {
                 buildRow("schedule-delete", "🗑️ Hapus Jadwal", "Hapus jadwal yang ada")
             ])
         ],
-        "Tap an option to continue",
-        "📅 Choose Action"
-    );
+        "Tap salah satu aksi",
+        "Pilih aksi"
+    )
 }
 
 /**
@@ -158,7 +142,7 @@ export function buildScheduleMenu() {
  */
 export function buildDonateMenu() {
     return buildListMessage(
-        "💖 *DONATE*\n\nTerima kasih atas dukunganmu! Pilih cara untuk mendukung:",
+        "💖 Support Bot\nTerima kasih atas dukunganmu. Pilih metode:",
         [
             buildSection("Donation Methods", [
                 buildRow("donate-saweria", "💳 Saweria", "Donasi via Saweria"),
@@ -166,9 +150,9 @@ export function buildDonateMenu() {
                 buildRow("donate-transfer", "🏦 Transfer Bank", "Informasi transfer bank")
             ])
         ],
-        "❤️ Tap to support the dev",
-        "💖 Support Options"
-    );
+        "Terima kasih sudah support",
+        "Pilih metode"
+    )
 }
 
 /**
@@ -186,6 +170,6 @@ export function buildConfirmationMenu(message) {
             ])
         ],
         "",
-        "⚠️ Choose Action"
-    );
+        "Pilih"
+    )
 }
