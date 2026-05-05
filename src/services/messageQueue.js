@@ -1,5 +1,4 @@
 import { MESSAGE_DELAYS } from "../config/delays.js"
-import { generateWAMessageFromContent, proto } from "@whiskeysockets/baileys"
 import { sleep, randomDelay } from "../utils/helpers.js"
 
 class QueueItem {
@@ -70,13 +69,7 @@ async function processQueue(sock, manager) {
             try {
                 await sock.sendPresenceUpdate("composing", item.jid)
                 await randomDelay(MESSAGE_DELAYS.TYPING_INDICATOR_MIN, MESSAGE_DELAYS.TYPING_INDICATOR_MAX)
-                if (item.message?.interactiveMenu) {
-                    await sendQuickReplyMenu(sock, item.jid, item.message.interactiveMenu)
-                } else if (item.message?.listMessage) {
-                    await sendLegacyListMessage(sock, item.jid, item.message.listMessage)
-                } else {
-                    await sock.sendMessage(item.jid, item.message)
-                }
+                await sock.sendMessage(item.jid, item.message)
                 await sock.sendPresenceUpdate("paused", item.jid)
 
                 manager.dequeueNext()
@@ -101,57 +94,6 @@ async function processQueue(sock, manager) {
         }
     } finally {
         manager.setProcessing(false)
-    }
-}
-
-async function sendLegacyListMessage(sock, jid, listMessage) {
-    const message = generateWAMessageFromContent(
-        jid,
-        proto.Message.fromObject({ listMessage }),
-        { userJid: sock.user?.id || jid }
-    )
-
-    return sock.relayMessage(jid, message.message, { messageId: message.key.id })
-}
-
-async function sendQuickReplyMenu(sock, jid, menu) {
-    const rows = menu.sections.flatMap(section => section.rows || [])
-
-    if (rows.length === 0) {
-        return sock.sendMessage(jid, { text: menu.description || "Menu kosong." })
-    }
-
-    const chunkSize = 3
-    for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize)
-        const chunkStart = i + 1
-        const chunkEnd = i + chunk.length
-        const shouldShowRange = rows.length > chunkSize
-
-        const contentText = shouldShowRange
-            ? `${menu.description}\n\nPilihan ${chunkStart}-${chunkEnd} dari ${rows.length}`
-            : menu.description
-
-        const buttons = chunk.map(row => ({
-            buttonId: row.rowId,
-            buttonText: { displayText: row.title },
-            type: 1
-        }))
-
-        const message = generateWAMessageFromContent(
-            jid,
-            proto.Message.fromObject({
-                buttonsMessage: {
-                    contentText,
-                    footerText: menu.footerText || "",
-                    buttons,
-                    headerType: 1
-                }
-            }),
-            { userJid: sock.user?.id || jid }
-        )
-
-        await sock.relayMessage(jid, message.message, { messageId: message.key.id })
     }
 }
 

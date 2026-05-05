@@ -1,13 +1,11 @@
 import { createReminder, getReminders, deleteReminder, toggleReminder } from "../repositories/reminderRepository.js"
 import { isValidTimeFormat } from "../utils/validation.js"
-import { buildReminderMenu } from "../utils/listMessageBuilder.js"
-import { enqueueMessage } from "../services/messageQueue.js"
 
 export async function handleReminder(context) {
-    const { args, groupId, userNumber, reply, sock } = context
+    const { args, groupId, userNumber, reply } = context
 
     if (!args.length || !args[0]) {
-        return await enqueueMessage(sock, groupId, buildReminderMenu())
+        return reply(`🔔 *Reminder Commands*\n\n/reminder add HH:MM\n/reminder list\n/reminder delete HH:MM\n/reminder on/off HH:MM`)
     }
 
     const action = args[0].toLowerCase()

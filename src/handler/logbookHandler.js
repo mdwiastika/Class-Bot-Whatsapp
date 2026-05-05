@@ -2,8 +2,6 @@ import { saveUserCredentials, getUserCredentials, deleteUserCredentials } from "
 import { getAvailableMatakuliah, loginAndSubmitLogbook, formatMatakuliahList } from "../services/pensLogbookService.js"
 import { validateUserCredentials } from "../utils/credentialValidator.js"
 import { isValidTimeRange } from "../utils/validation.js"
-import { buildLogbookMenu } from "../utils/listMessageBuilder.js"
-import { enqueueMessage } from "../services/messageQueue.js"
 
 async function handleLogbookSetup(context) {
     const { args, sender, groupId, reply } = context
@@ -136,10 +134,10 @@ async function handleLogbookDelete(context) {
 }
 
 export async function handleLogbook(context) {
-    const { args, sock, groupId } = context
+    const { args } = context
 
     if (!args.length) {
-        return await enqueueMessage(sock, groupId, buildLogbookMenu())
+        return context.reply(`📚 *LOGBOOK COMMANDS*\n\n/logbook setup email password\n/logbook matkul\n/logbook fill # jam jam activity\n/logbook info\n/logbook delete`)
     }
 
     const action = args[0].toLowerCase()

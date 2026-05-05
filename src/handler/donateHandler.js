@@ -1,26 +1,44 @@
-import { buildDonateMenu } from "../utils/listMessageBuilder.js"
-import { enqueueMessage } from "../services/messageQueue.js"
-
 export async function handleDonate(context) {
-    const { args, reply, sock, groupId } = context
+    const { reply } = context
 
-    if (!args.length || !args[0]) {
-        return await enqueueMessage(sock, groupId, buildDonateMenu())
-    }
+    return reply(`
+╔════════════════════════╗
+║ 💖 SUPPORT BOT INI     ║
+╚════════════════════════╝
 
-    const method = args[0].toLowerCase()
+🙏 *Terima kasih sudah pakai bot ini!*
 
-    if (method === "saweria") {
-        return reply(`💳 SAWERIA DONATION`)
-    }
+Jika bot ini membantu & bermanfaat,
+kamu bisa mendukung pengembangannya 💪
 
-    if (method === "trakteer") {
-        return reply(`Coffee TRAKTEER.ID`)
-    }
+────────────────────
 
-    if (method === "transfer") {
-        return reply(`Bank TRANSFER Info`)
-    }
+👤 *A/N: Marcel Dwi Astika*
 
-    return await enqueueMessage(sock, groupId, buildDonateMenu())
+*🏦 TRANSFER BANK*
+
+💳 *BCA*
+   0501165076
+
+💳 *SeaBank*
+   901770566633
+
+────────────────────
+
+*📱 E-WALLET*
+0895339390753
+
+Tersedia di:
+🔸 OVO
+🔸 DANA  
+🔸 GoPay
+🔸 ShopeePay
+
+────────────────────
+
+✨ Setiap donasi sangat berarti!
+🔥 Membantu develop fitur baru
+⚙️  Maintenance & support
+🚀 Terima kasih banyak! 🙌
+`)
 }

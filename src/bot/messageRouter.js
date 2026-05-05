@@ -2,7 +2,6 @@ import {
     handleMenu,
     handleTask,
 } from "./commandHandlers.js"
-import { handleInteractiveSelection } from "./interactiveHandler.js"
 import { handleReminder } from "../handler/reminderHandler.js"
 import { handleDonate } from "../handler/donateHandler.js"
 import { handleLogbook } from "../handler/logbookHandler.js"
@@ -11,22 +10,6 @@ import { handleSchedule } from "../handler/scheduleHandler.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId } = context
-
-    if (context.selectedRowId) {
-        try {
-            const handled = await handleInteractiveSelection(context)
-            if (handled !== false) return handled
-
-            return sock.sendMessage(groupId, {
-                text: "⚠️ Opsi tidak dikenali. Ketik /menu untuk buka menu lagi."
-            })
-        } catch (error) {
-            console.error("Interactive selection error:", error)
-            return sock.sendMessage(groupId, {
-                text: "⚠️ Something went wrong while processing your selection."
-            })
-        }
-    }
 
     if (!text) return
     if (!text.startsWith("/")) return
@@ -59,7 +42,7 @@ export async function routeMessage(context) {
 
     if (!handler) {
         return sock.sendMessage(groupId, {
-            text: "❌ Unknown command.\nType /menu to see available commands."
+            text: `❌ Unknown command.\nType /menu to see available commands.`
         })
     }
 

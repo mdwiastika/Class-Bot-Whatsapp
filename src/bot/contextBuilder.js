@@ -1,11 +1,10 @@
 export function buildContext(sock, msgWrapper) {
 
     const msg = msgWrapper.msg || msgWrapper
-    const content = extractMessageContent(msg.message || {})
 
     const text =
-        content.conversation ||
-        content.extendedTextMessage?.text ||
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
         ""
 
     const groupId = msg.key.remoteJid
@@ -33,13 +32,6 @@ export function buildContext(sock, msgWrapper) {
 
     const args = parts.slice(1)
 
-    const selectedRowId =
-        content.listResponseMessage?.singleSelectReply?.selectedRowId ||
-        content.buttonsResponseMessage?.selectedButtonId ||
-        content.templateButtonReplyMessage?.selectedId ||
-        extractInteractiveSelectionId(content) ||
-        null
-
     return {
         sock,
         text,
@@ -50,50 +42,7 @@ export function buildContext(sock, msgWrapper) {
         isGroup,
         command,
         args,
-        selectedRowId,
         reply: (message) =>
             sock.sendMessage(groupId, { text: message })
-    }
-}
-
-function extractMessageContent(message) {
-    let current = message
-
-    while (current) {
-        if (current.ephemeralMessage?.message) {
-            current = current.ephemeralMessage.message
-            continue
-        }
-
-        if (current.viewOnceMessage?.message) {
-            current = current.viewOnceMessage.message
-            continue
-        }
-
-        if (current.viewOnceMessageV2?.message) {
-            current = current.viewOnceMessageV2.message
-            continue
-        }
-
-        if (current.viewOnceMessageV2Extension?.message) {
-            current = current.viewOnceMessageV2Extension.message
-            continue
-        }
-
-        break
-    }
-
-    return current || {}
-}
-
-function extractInteractiveSelectionId(content) {
-    const paramsJson = content.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson
-    if (!paramsJson) return null
-
-    try {
-        const parsed = JSON.parse(paramsJson)
-        return parsed.id || parsed.selectedRowId || parsed.rowId || null
-    } catch {
-        return null
     }
 }
