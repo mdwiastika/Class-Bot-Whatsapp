@@ -35,6 +35,8 @@ export function buildContext(sock, msgWrapper) {
 
     const selectedRowId =
         content.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        content.buttonsResponseMessage?.selectedButtonId ||
+        content.templateButtonReplyMessage?.selectedId ||
         extractInteractiveSelectionId(content) ||
         null
 

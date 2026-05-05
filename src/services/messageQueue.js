@@ -70,8 +70,10 @@ async function processQueue(sock, manager) {
             try {
                 await sock.sendPresenceUpdate("composing", item.jid)
                 await randomDelay(MESSAGE_DELAYS.TYPING_INDICATOR_MIN, MESSAGE_DELAYS.TYPING_INDICATOR_MAX)
-                if (item.message?.listMessage) {
-                    await sendListMessage(sock, item.jid, item.message.listMessage)
+                if (item.message?.interactiveMenu) {
+                    await sendQuickReplyMenu(sock, item.jid, item.message.interactiveMenu)
+                } else if (item.message?.listMessage) {
+                    await sendLegacyListMessage(sock, item.jid, item.message.listMessage)
                 } else {
                     await sock.sendMessage(item.jid, item.message)
                 }
@@ -102,7 +104,7 @@ async function processQueue(sock, manager) {
     }
 }
 
-async function sendListMessage(sock, jid, listMessage) {
+async function sendLegacyListMessage(sock, jid, listMessage) {
     const message = generateWAMessageFromContent(
         jid,
         proto.Message.fromObject({ listMessage }),
@@ -110,6 +112,47 @@ async function sendListMessage(sock, jid, listMessage) {
     )
 
     return sock.relayMessage(jid, message.message, { messageId: message.key.id })
+}
+
+async function sendQuickReplyMenu(sock, jid, menu) {
+    const rows = menu.sections.flatMap(section => section.rows || [])
+
+    if (rows.length === 0) {
+        return sock.sendMessage(jid, { text: menu.description || "Menu kosong." })
+    }
+
+    const chunkSize = 3
+    for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize)
+        const chunkStart = i + 1
+        const chunkEnd = i + chunk.length
+        const shouldShowRange = rows.length > chunkSize
+
+        const contentText = shouldShowRange
+            ? `${menu.description}\n\nPilihan ${chunkStart}-${chunkEnd} dari ${rows.length}`
+            : menu.description
+
+        const buttons = chunk.map(row => ({
+            buttonId: row.rowId,
+            buttonText: { displayText: row.title },
+            type: 1
+        }))
+
+        const message = generateWAMessageFromContent(
+            jid,
+            proto.Message.fromObject({
+                buttonsMessage: {
+                    contentText,
+                    footerText: menu.footerText || "",
+                    buttons,
+                    headerType: 1
+                }
+            }),
+            { userJid: sock.user?.id || jid }
+        )
+
+        await sock.relayMessage(jid, message.message, { messageId: message.key.id })
+    }
 }
 
 export async function enqueueMessage(sock, jid, message) {

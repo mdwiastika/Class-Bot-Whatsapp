@@ -4,13 +4,12 @@ export function buildListMessage(description, sections, footer = "", buttonText 
     }
 
     return {
-        listMessage: {
+        interactiveMenu: {
             title: "Class Manager Bot",
             description,
             buttonText,
-            listType: 1,
             sections,
-            footerText: footer || undefined
+            footerText: footer || undefined,
         }
     }
 }
