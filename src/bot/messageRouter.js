@@ -9,9 +9,36 @@ import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
 
 export async function routeMessage(context) {
-    const { text, sock, groupId } = context
+    const { text, sock, groupId, msg } = context
+    if (!context._buttonHandled) {
+        const buttonResponse = msg?.message?.templateButtonReplyMessage
+        if (buttonResponse?.selectedId) {
+            context.text = buttonResponse.selectedId
+            context._buttonHandled = true  // ✅ flag agar tidak loop
+
+            const parts = context.text.trim().split(/\s+/)
+            context.command = parts[0]?.startsWith("/") ? parts[0].slice(1).toLowerCase() : null
+            context.args = parts.slice(1)
+
+            return routeMessage(context)
+        }
+
+        const interactiveResponse = msg?.message?.interactiveResponseMessage
+        if (interactiveResponse) {
+            const paramsJson = interactiveResponse.nativeFlowResponseMessage?.paramsJson
+            const buttonId = paramsJson
+                ? JSON.parse(paramsJson).id
+                : interactiveResponse.body?.text
+            if (buttonId) {
+                context.text = buttonId
+                context._buttonHandled = true  // ✅ flag agar tidak loop
+                return routeMessage(context)
+            }
+        }
+    }
 
     if (!text) return
+
     if (!text.startsWith("/")) return
 
     const parts = text.trim().split(/\s+/)
@@ -40,16 +67,22 @@ export async function routeMessage(context) {
 
     const handler = routes[command]
     const buttons = [
-        { buttonId: 'id1', buttonText: { displayText: 'Button 1' }, type: 1 },
-        { buttonId: 'id2', buttonText: { displayText: 'Button 2' }, type: 1 },
-        { buttonId: 'id3', buttonText: { displayText: 'Button 3' }, type: 1 }
+        {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+                display_text: "Menu",
+                id: "/menu",
+            }),
+        },
     ]
 
     const buttonMessage = {
-        text: "Command not found. Please use /menu to see available commands.",
-        footer: 'Hello World',
-        buttons: buttons,
-        headerType: 1
+        interactiveMessage: {
+            title: "Command not found. Please use /menu to see available commands.",
+            footer: 'Pilih pilihan di bawah untuk melihat menu.',
+            buttons: buttons,
+            headerType: 1
+        }
     }
     if (!handler) {
         return sock.sendMessage(groupId, buttonMessage)
@@ -61,7 +94,8 @@ export async function routeMessage(context) {
         if (!existingGroup) {
             await createGroup(context.groupId)
         }
-        await handler(context)
+        // Pass the modified context with the new text
+        await handler({ ...context, text })
     } catch (error) {
         console.error("Command error:", error)
 

@@ -12,12 +12,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "axios": "^1.15.0",
     "axios-cookiejar-support": "^6.0.5",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
     "node-cron": "^4.2.1",
+    "ourin-baileys": "^0.7.14",
     "pg": "^8.18.0",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",

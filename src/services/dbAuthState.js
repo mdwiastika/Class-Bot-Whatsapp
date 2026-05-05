@@ -3,7 +3,7 @@ import {
     initAuthCreds,
     BufferJSON,
     proto
-} from "@whiskeysockets/baileys"
+} from "ourin-baileys"
 
 const SESSION_ID = "main" // Kamu bisa ganti ini kalau mau multi-session
 

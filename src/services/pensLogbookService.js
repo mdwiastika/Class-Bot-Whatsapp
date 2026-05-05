@@ -5,6 +5,9 @@ import * as cheerio from "cheerio"
 import { PENS_CONFIG } from "../config/pens.js"
 import { hasBlockedSqlKeyword } from "../utils/validation.js"
 
+const MATKUL_CACHE_TTL_MS = 5 * 60 * 1000
+const matakuliahCache = new Map()
+
 function createClient(jar, targetHost) {
     return wrapper(axios.create({
         jar,
@@ -215,6 +218,67 @@ export async function getAvailableMatakuliah(email, password) {
     } catch (error) {
         console.error("[PENS Matkul] ❌ Error:", error.message)
         return { success: false, message: error.message }
+    }
+}
+
+function getMatkulCacheKey(email) {
+    return String(email || "").toLowerCase().trim()
+}
+
+function getCachedMatakuliah(email) {
+    const key = getMatkulCacheKey(email)
+    if (!key || !matakuliahCache.has(key)) return null
+
+    const cached = matakuliahCache.get(key)
+    if (!cached) return null
+
+    const isExpired = Date.now() - cached.cachedAt > MATKUL_CACHE_TTL_MS
+    if (isExpired) {
+        matakuliahCache.delete(key)
+        return null
+    }
+
+    return cached.value
+}
+
+function setCachedMatakuliah(email, value) {
+    const key = getMatkulCacheKey(email)
+    if (!key || !value) return
+
+    matakuliahCache.set(key, {
+        value,
+        cachedAt: Date.now()
+    })
+}
+
+export function clearMatakuliahCache(email) {
+    const key = getMatkulCacheKey(email)
+    if (!key) return
+    matakuliahCache.delete(key)
+}
+
+export async function getAvailableMatakuliahCached(email, password, options = {}) {
+    const { forceRefresh = false } = options
+
+    if (!forceRefresh) {
+        const cached = getCachedMatakuliah(email)
+        if (cached) {
+            return {
+                success: true,
+                data: cached,
+                cached: true
+            }
+        }
+    }
+
+    const result = await getAvailableMatakuliah(email, password)
+    if (result.success) {
+        setCachedMatakuliah(email, result.data)
+    }
+
+    return {
+        ...result,
+        cached: false
     }
 }
 

@@ -3,7 +3,7 @@ import makeWASocket, {
     DisconnectReason,
     Browsers,
     fetchLatestBaileysVersion
-} from '@whiskeysockets/baileys'
+} from 'ourin-baileys'
 
 import { useDbAuthState } from './services/dbAuthState.js'
 import P from 'pino'

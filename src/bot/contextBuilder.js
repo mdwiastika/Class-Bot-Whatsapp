@@ -35,6 +35,7 @@ export function buildContext(sock, msgWrapper) {
     return {
         sock,
         text,
+        msg,
         groupId,
         chatId: groupId,
         sender: senderJid,
@@ -42,6 +43,7 @@ export function buildContext(sock, msgWrapper) {
         isGroup,
         command,
         args,
+        message: msg.message,
         reply: (message) =>
             sock.sendMessage(groupId, { text: message })
     }
