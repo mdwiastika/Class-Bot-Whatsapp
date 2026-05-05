@@ -1,7 +1,7 @@
 import { saveUserCredentials, getUserCredentials, deleteUserCredentials } from "../repositories/userCredentialsRepository.js"
 import { getAvailableMatakuliah, loginAndSubmitLogbook, formatMatakuliahList } from "../services/pensLogbookService.js"
 import { validateUserCredentials } from "../utils/credentialValidator.js"
-import { isValidTimeRange } from "../utils/validation.js"
+import { hasBlockedSqlKeyword, isValidTimeRange } from "../utils/validation.js"
 
 async function sendProgressMessage(context, text) {
     const sent = await context.sock.sendMessage(context.groupId, { text })
@@ -89,6 +89,10 @@ Gunakan:
 
 Contoh:
 /logbook fill 1 07:00 16:00 "Belajar chapter 5"`)
+        }
+
+        if (hasBlockedSqlKeyword(kegiatan)) {
+            return reply("❌ Kegiatan mengandung kata yang tidak diizinkan.\n\nHINDARI KATA-KATA SELECT, INSERT, UPDATE, DAN DELETE KARENA MEMUNGKINKAN DATA LOGBOOK TIDAK TERSIMPAN.")
         }
 
         const timeValidation = isValidTimeRange(jamMulai, jamSelesai)

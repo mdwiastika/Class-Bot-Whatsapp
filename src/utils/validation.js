@@ -4,6 +4,8 @@ const PATTERNS = {
     EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 }
 
+const BLOCKED_SQL_KEYWORDS = /\b(select|insert|update|delete)\b/i
+
 export function isValidTimeFormat(time) {
     return PATTERNS.TIME_HH_MM.test(time)
 }
@@ -71,6 +73,11 @@ export function isValidPositiveInteger(value) {
 export function isInRange(value, min, max) {
     const num = Number(value)
     return Number.isFinite(num) && num >= min && num <= max
+}
+
+export function hasBlockedSqlKeyword(input) {
+    if (!input || typeof input !== "string") return false
+    return BLOCKED_SQL_KEYWORDS.test(input)
 }
 
 export const VALIDATION_PATTERNS = PATTERNS

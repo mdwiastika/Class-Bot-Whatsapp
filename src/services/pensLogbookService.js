@@ -3,6 +3,7 @@ import { wrapper } from "axios-cookiejar-support"
 import { CookieJar } from "tough-cookie"
 import * as cheerio from "cheerio"
 import { PENS_CONFIG } from "../config/pens.js"
+import { hasBlockedSqlKeyword } from "../utils/validation.js"
 
 function createClient(jar, targetHost) {
     return wrapper(axios.create({
@@ -17,6 +18,10 @@ function createClient(jar, targetHost) {
 
 export async function loginAndSubmitLogbook(email, password, logbookData) {
     try {
+        if (hasBlockedSqlKeyword(logbookData.kegiatan)) {
+            throw new Error("HINDARI KATA-KATA SELECT, INSERT, UPDATE, DAN DELETE KARENA MEMUNGKINKAN DATA LOGBOOK TIDAK TERSIMPAN.")
+        }
+
         const jar = new CookieJar()
         await loginCAS(jar, email, password)
 
