@@ -7,6 +7,7 @@ import { handleDonate } from "../handler/donateHandler.js"
 import { handleLogbook } from "../handler/logbookHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
+import { handleButton } from "../handler/testHandler.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId } = context
@@ -36,13 +37,21 @@ export async function routeMessage(context) {
         "/donate": handleDonate,
         "/donation": handleDonate,
         "/donasi": handleDonate,
+        "/button": handleButton,
     }
 
     const handler = routes[command]
 
     if (!handler) {
         return sock.sendMessage(groupId, {
-            text: `❌ Unknown command.\nType /menu to see available commands.`
+            text: `❌ Unknown command.\nType /menu to see available commands.`,
+            buttons: [
+                { buttonId: "1", buttonText: { displayText: "Jaringan Komputer" }, type: 1 },
+                { buttonId: "2", buttonText: { displayText: "Pemrograman Web" }, type: 1 },
+                { buttonId: "3", buttonText: { displayText: "Basis Data" }, type: 1 },
+            ],
+            footer: "KP Logbook Bot",
+            headerType: 1
         })
     }
 
