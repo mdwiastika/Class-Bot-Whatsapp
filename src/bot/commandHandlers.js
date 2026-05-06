@@ -56,6 +56,13 @@ const reminderButtons = [
       id: "/reminder list",
     }),
   },
+  {
+    name: "quick_reply",
+    buttonParamsJson: JSON.stringify({
+      display_text: "➕ Add",
+      id: "/reminder add",
+    }),
+  },
 ]
 
 const scheduleButtons = [

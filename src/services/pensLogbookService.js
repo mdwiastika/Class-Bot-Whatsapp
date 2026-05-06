@@ -5,8 +5,48 @@ import * as cheerio from "cheerio"
 import { PENS_CONFIG } from "../config/pens.js"
 import { hasBlockedSqlKeyword } from "../utils/validation.js"
 
-const MATKUL_CACHE_TTL_MS = 5 * 60 * 1000
+const MATKUL_CACHE_TTL_MS = 30 * 60 * 1000
+const SESSION_TTL_MS = 30 * 60 * 1000
+const RETRY_BACKOFF_MS = [1000, 2500, 5000]
+const MAX_RETRIES = RETRY_BACKOFF_MS.length
 const matakuliahCache = new Map()
+
+// Session cache per email to reuse CookieJar and avoid re-login when possible
+const sessionStore = new Map()
+
+function getSessionKey(email) {
+    return String(email || "").toLowerCase().trim()
+}
+
+function getSession(email) {
+    const key = getSessionKey(email)
+    const entry = sessionStore.get(key)
+    if (!entry) return null
+
+    const expired =
+        Date.now() - entry.updatedAt > SESSION_TTL_MS
+
+    if (expired) {
+        sessionStore.delete(key)
+        return null
+    }
+
+    return entry
+}
+
+function setSession(email, jar) {
+    const key = getSessionKey(email)
+    sessionStore.set(key, { jar, updatedAt: Date.now() })
+}
+function clearSession(email) {
+    const key = getSessionKey(email)
+    sessionStore.delete(key)
+}
+
+export function getSessionJar(email) {
+    const s = getSession(email)
+    return s ? s.jar : null
+}
 
 function createClient(jar, targetHost) {
     return wrapper(axios.create({
@@ -19,16 +59,59 @@ function createClient(jar, targetHost) {
     }))
 }
 
-export async function loginAndSubmitLogbook(email, password, logbookData) {
+function sleep(ms) {
+    return new Promise(res => setTimeout(res, ms))
+}
+
+export async function loginAndSubmitLogbook(email, password, logbookData, options = {}) {
     try {
         if (hasBlockedSqlKeyword(logbookData.kegiatan)) {
             throw new Error("HINDARI KATA-KATA SELECT, INSERT, UPDATE, DAN DELETE KARENA MEMUNGKINKAN DATA LOGBOOK TIDAK TERSIMPAN.")
         }
 
-        const jar = new CookieJar()
-        await loginCAS(jar, email, password)
+        let jar = options.jar || null
+        let misClient
 
-        const misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
+        if (jar) {
+            // try using provided session jar first
+            try {
+                misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
+                // quick check; retry a couple times for transient failures
+                let ok = false
+                for (let i = 0; i < MAX_RETRIES; i++) {
+                    try {
+                        await getLogbookData(misClient)
+                        ok = true
+                        break
+                    } catch (err) {
+                        // transient — wait then retry
+                        if (i < MAX_RETRIES - 1) await sleep(RETRY_BACKOFF_MS[i])
+                    }
+                }
+                if (!ok) throw new Error('Session check failed')
+            } catch (err) {
+                clearSession(email)
+                jar = null
+            }
+        }
+
+        if (!jar) {
+            jar = new CookieJar()
+            // retry login a few times for transient errors
+            let logged = false
+            for (let i = 0; i < MAX_RETRIES; i++) {
+                try {
+                    await loginCAS(jar, email, password)
+                    logged = true
+                    break
+                } catch (err) {
+                    if (i < MAX_RETRIES - 1) await sleep(RETRY_BACKOFF_MS[i])
+                }
+            }
+            if (!logged) throw new Error('CAS login failed after retries')
+        }
+
+        misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
         const data = await getLogbookData(misClient)
 
         const matakuliahId = logbookData.matakuliah
@@ -105,10 +188,13 @@ async function loginCAS(jar, email, password) {
                 { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
             )
         } catch (err) {
+            // Some environments throw on redirect; capture response if present
             if (err.response?.status === 302) {
                 res = err.response
             } else {
-                throw err
+                const status = err.response?.status || err.code || ''
+                const msg = err.message || ''
+                throw new Error(`CAS login failed: ${status} ${msg}`)
             }
         }
 
@@ -259,7 +345,7 @@ export function clearMatakuliahCache(email) {
 
 export async function getAvailableMatakuliahCached(email, password, options = {}) {
     const { forceRefresh = false } = options
-
+    // If cached matakuliah available and not forcing refresh, return it immediately
     if (!forceRefresh) {
         const cached = getCachedMatakuliah(email)
         if (cached) {
@@ -271,22 +357,98 @@ export async function getAvailableMatakuliahCached(email, password, options = {}
         }
     }
 
-    const result = await getAvailableMatakuliah(email, password)
-    if (result.success) {
-        setCachedMatakuliah(email, result.data)
+    // Try to reuse existing session (CookieJar) to fetch matakuliah without re-login
+    const existingSession = getSession(email)
+    if (existingSession && !forceRefresh) {
+        try {
+            const misClient = createClient(existingSession.jar, PENS_CONFIG.MIS_HOST)
+            const data = await getLogbookData(misClient)
+            const payload = {
+                matakuliah: data.matakuliahList,
+                params: {
+                    valTahun: data.valTahun,
+                    valSemester: data.valSemester,
+                    valMinggu: data.valMinggu
+                },
+                nrp: data.nrp
+            }
+            // update cache and return
+            setCachedMatakuliah(email, payload)
+            return { success: true, data: payload, cached: false }
+        } catch (err) {
+            // session probably expired or invalid, fallthrough to re-login
+            console.warn(`[PENS Session] session reuse failed for ${email}: ${err.message}`)
+            clearSession(email)
+        }
     }
 
-    return {
-        ...result,
-        cached: false
+    // No usable session, perform full login and fetch
+    try {
+        const jar = new CookieJar()
+        await loginCAS(jar, email, password)
+        // store session for reuse
+        setSession(email, jar)
+
+        const misClient = createClient(jar, PENS_CONFIG.MIS_HOST)
+        const data = await getLogbookData(misClient)
+
+        const payload = {
+            matakuliah: data.matakuliahList,
+            params: {
+                valTahun: data.valTahun,
+                valSemester: data.valSemester,
+                valMinggu: data.valMinggu
+            },
+            nrp: data.nrp
+        }
+
+        if (payload) setCachedMatakuliah(email, payload)
+
+        return { success: true, data: payload, cached: false }
+    } catch (error) {
+        console.error("[PENS Matkul] ❌ Error:", error.message)
+        return { success: false, message: error.message }
     }
 }
 
 export function formatMatakuliahList(matakuliahList) {
+    // let text = `Isi logbook:\n/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"\n\nContoh:\n/logbook fill 1 07:00 16:00 "Belajar chapter 5\n\n"`
     let text = "📚 *Daftar Mata Kuliah*\n──────────\n\n"
     matakuliahList.forEach((mk, index) => {
         text += `${index + 1}. ${mk.text}\n`
     })
-    text += `Isi logbook:\n/logbook fill [NOMOR] [jam_mulai] [jam_selesai] "kegiatan"\n\nContoh:\n/logbook fill 1 07:00 16:00 "Belajar chapter 5"`
     return text
 }
+
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000 // 10 menit
+
+function cleanupSessions() {
+    const now = Date.now()
+
+    for (const [key, session] of sessionStore.entries()) {
+        const expired =
+            now - session.updatedAt > SESSION_TTL_MS
+
+        if (expired) {
+            sessionStore.delete(key)
+        }
+    }
+}
+
+function cleanupMatkulCache() {
+    const now = Date.now()
+
+    for (const [key, cache] of matakuliahCache.entries()) {
+        const expired =
+            now - cache.cachedAt > MATKUL_CACHE_TTL_MS
+
+        if (expired) {
+            matakuliahCache.delete(key)
+        }
+    }
+}
+
+setInterval(() => {
+    cleanupSessions()
+    cleanupMatkulCache()
+}, CLEANUP_INTERVAL_MS)

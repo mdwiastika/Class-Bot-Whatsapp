@@ -4,9 +4,11 @@ import {
 } from "./commandHandlers.js"
 import { handleReminder } from "../handler/reminderHandler.js"
 import { handleDonate } from "../handler/donateHandler.js"
-import { handleLogbook } from "../handler/logbookHandler.js"
+import { handleLogbook, processLogbookInteractiveReply } from "../handler/logbookHandler.js"
+import { processReminderInteractiveReply } from "../handler/reminderHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
+import { getPendingAction } from "../services/interactionService.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId, msg } = context
@@ -38,6 +40,20 @@ export async function routeMessage(context) {
     }
 
     if (!text) return
+
+    // If user has a pending interactive action (e.g., logbook setup),
+    // and message is NOT a command, forward to respective handler.
+    const pending = await getPendingAction(context.sender)
+    if (pending && !text.startsWith("/")) {
+        // Only logbook interactive flows implemented for now
+        if (pending.action && pending.action.startsWith("logbook_")) {
+            return processLogbookInteractiveReply({ ...context, text }, pending)
+        }
+
+        if (pending.action && pending.action.startsWith("reminder_")) {
+            return processReminderInteractiveReply({ ...context, text }, pending)
+        }
+    }
 
     if (!text.startsWith("/")) return
 
