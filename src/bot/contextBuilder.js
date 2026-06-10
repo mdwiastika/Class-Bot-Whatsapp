@@ -18,7 +18,9 @@ export function buildContext(sock, msgWrapper) {
             msg.key.participant ||
             null
     } else {
-        senderJid = msg.key.remoteJid
+        senderJid =
+            msg.key.remoteJidAlt ||
+            msg.key.remoteJid
     }
 
     const userNumber = senderJid

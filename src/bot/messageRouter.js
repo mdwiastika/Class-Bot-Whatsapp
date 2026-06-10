@@ -9,6 +9,8 @@ import { processReminderInteractiveReply } from "../handler/reminderHandler.js"
 import { findGroup, createGroup } from "../repositories/groupRepository.js"
 import { handleSchedule } from "../handler/scheduleHandler.js"
 import { getPendingAction } from "../services/interactionService.js"
+import { handleBackupNow, handleSetBackupTime, handleGetBackupTime } from "../handler/backupHandler.js"
+import { getAdminJid } from "../services/backupService.js"
 
 export async function routeMessage(context) {
     const { text, sock, groupId, msg } = context
@@ -79,6 +81,22 @@ export async function routeMessage(context) {
         "/donate": handleDonate,
         "/donation": handleDonate,
         "/donasi": handleDonate,
+    }
+
+    const adminJid = await getAdminJid(sock)
+    
+    // Normalize JID formats by splitting off any port/companion device suffix
+    const senderClean = context.sender ? context.sender.split(":")[0] : ""
+    const adminJidClean = adminJid ? adminJid.split(":")[0] : ""
+    console.log(`[DEBUG] Comparing sender JID: "${context.sender}" (clean: "${senderClean}") with resolved admin JID: "${adminJid}" (clean: "${adminJidClean}")`)
+    
+    const isAuthorized = senderClean && adminJidClean && senderClean === adminJidClean
+    
+    if (isAuthorized) {
+        routes["/backup"] = handleBackupNow
+        routes["/backupdb"] = handleBackupNow
+        routes["/setbackup"] = handleSetBackupTime
+        routes["/backuptime"] = handleGetBackupTime
     }
 
     const handler = routes[command]

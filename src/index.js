@@ -13,6 +13,7 @@ import { routeMessage } from './bot/messageRouter.js'
 import { buildContext } from './bot/contextBuilder.js'
 import { startReminderScheduler } from "./services/reminderScheduler.js"
 import { startGlobalScheduler } from './services/scheduler.js'
+import { startBackupScheduler } from "./services/backupScheduler.js"
 
 let schedulerStarted = false
 
@@ -43,6 +44,7 @@ async function startBot() {
             if (!schedulerStarted) {
                 startReminderScheduler(sock)
                 startGlobalScheduler(sock)
+                startBackupScheduler(sock)
                 schedulerStarted = true
             }
         }
